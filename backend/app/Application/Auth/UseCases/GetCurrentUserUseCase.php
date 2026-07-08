@@ -11,7 +11,7 @@ class GetCurrentUserUseCase
     public function execute(User $user): User
     {
         // Cargar relaciones necesarias
-        $user->load(['perfil', 'departamentos']);
+        $user->load(['perfil', 'departamentos', 'permisos.departamento']);
         
         return $user;
     }

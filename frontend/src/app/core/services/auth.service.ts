@@ -37,7 +37,12 @@ export class AuthService {
   // Computed values para roles
   readonly isAdmin = computed(() => this.userSignal()?.rol === 'ADMIN');
   readonly isUser = computed(() => this.userSignal()?.rol === 'USER');
-  readonly isEditor = computed(() => this.userSignal()?.rol === 'EDITOR');
+  readonly isEditor = computed(() => {
+    const user = this.userSignal();
+    if (!user) return false;
+    if (user.rol === 'EDITOR') return true;
+    return !!user.departamentos?.some((d) => d.rol === 'EDITOR' || d.rol === 'ADMIN');
+  });
   readonly isSubscriber = computed(() => this.userSignal()?.rol === 'SUBSCRIBER');
   readonly userRole = computed(() => this.userSignal()?.rol ?? null);
 
@@ -101,8 +106,11 @@ export class AuthService {
    * Verificar si el usuario tiene alguno de los roles especificados
    */
   hasAnyRole(roles: UserRole[]): boolean {
-    const userRole = this.userSignal()?.rol;
-    return userRole ? roles.includes(userRole) : false;
+    const user = this.userSignal();
+    if (!user) return false;
+    if (roles.includes(user.rol)) return true;
+    if (roles.includes('EDITOR') && this.isEditor()) return true;
+    return false;
   }
 
   /**

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Infrastructure\Persistence\Eloquent\Models\PermisoModel;
 
 class DepartamentoModel extends Model
 {
@@ -39,6 +40,11 @@ class DepartamentoModel extends Model
     public function datasets(): HasMany
     {
         return $this->hasMany(DatasetModel::class, 'departamento_id');
+    }
+
+    public function permisos(): HasMany
+    {
+        return $this->hasMany(PermisoModel::class, 'departamento_id');
     }
 
     public function scopePublicos($query)

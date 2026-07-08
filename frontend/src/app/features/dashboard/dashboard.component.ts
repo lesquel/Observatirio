@@ -34,7 +34,7 @@ import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit {
-    private readonly destroyRef = inject(DestroyRef);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly deptoService = inject(DepartamentoService);
   private readonly translate = inject(TranslateService);
   authService = inject(AuthService);
@@ -43,6 +43,17 @@ export class DashboardComponent implements OnInit {
   loading = signal(true);
 
   // Computed values
+  userRoleLabel = computed(() => {
+    if (this.authService.isAdmin()) {
+      return 'Administrador Global';
+    }
+    const deptos = this.departamentos();
+    if (deptos.length > 0) {
+      return 'Editor de Dimensiones';
+    }
+    return 'Lector';
+  });
+
   totalDatasets = computed(() => {
     let count = 0;
     this.departamentos().forEach((d) => {

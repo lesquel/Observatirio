@@ -51,7 +51,10 @@ class EloquentDepartamentoRepository implements DepartamentoRepositoryInterface
     public function findAllByUserId(int $userId): Collection
     {
         $models = $this->model
-            ->whereHas('usuarios', fn($q) => $q->where('user_id', $userId))
+            ->where(function ($query) use ($userId) {
+                $query->whereHas('usuarios', fn($q) => $q->where('user_id', $userId))
+                      ->orWhereHas('permisos', fn($q) => $q->where('user_id', $userId)->where('nivel', '!=', 'ninguno'));
+            })
             ->with(['datasets' => fn($q) => $q->select('id', 'departamento_id', 'nombre', 'estado', 'total_registros')])
             ->get();
 
@@ -109,10 +112,13 @@ class EloquentDepartamentoRepository implements DepartamentoRepositoryInterface
             return $this->model->where('id', $departamentoId)->exists();
         }
 
-        // Para otros usuarios, verificar asignación específica
+        // Para otros usuarios, verificar asignación específica o permisos
         return $this->model
             ->where('id', $departamentoId)
-            ->whereHas('usuarios', fn($q) => $q->where('user_id', $userId))
+            ->where(function ($query) use ($userId) {
+                $query->whereHas('usuarios', fn($q) => $q->where('user_id', $userId))
+                      ->orWhereHas('permisos', fn($q) => $q->where('user_id', $userId)->where('nivel', '!=', 'ninguno'));
+            })
             ->exists();
     }
 
@@ -135,11 +141,25 @@ class EloquentDepartamentoRepository implements DepartamentoRepositoryInterface
             ->with(['usuarios' => fn($q) => $q->where('user_id', $userId)])
             ->first();
 
-        if (!$model || $model->usuarios->isEmpty()) {
-            return null;
+        if ($model && !$model->usuarios->isEmpty()) {
+            return $model->usuarios->first()->pivot->rol;
         }
 
-        return $model->usuarios->first()->pivot->rol;
+        // Si no tiene asignación en la tabla pivote, verificar permisos específicos
+        $permiso = \App\Infrastructure\Persistence\Eloquent\Models\PermisoModel::where('user_id', $userId)
+            ->where('departamento_id', $departamentoId)
+            ->first();
+
+        if ($permiso && $permiso->nivel !== 'ninguno') {
+            return match ($permiso->nivel) {
+                'admin' => 'ADMIN',
+                'escritura' => 'EDITOR',
+                'lectura' => 'LECTOR',
+                default => null,
+            };
+        }
+
+        return null;
     }
 
     private function toDomain(DepartamentoModel $model): Departamento
