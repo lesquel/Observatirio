@@ -183,6 +183,10 @@
                             <mat-icon>open_in_new</mat-icon>
                             Leer artículo
                           </a>
+                          <a mat-stroked-button [href]="art.enlace" [download]="art.titulo + '.pdf'" class="btn-descargar">
+                            <mat-icon>download</mat-icon>
+                            Descargar
+                          </a>
                         </div>
                       }
                     </div>
@@ -205,6 +209,77 @@
         <ng-template mat-tab-label>
           <mat-icon>bar_chart</mat-icon>
           <span>PowerBI</span>
+        </ng-template>
+
+        <section class="tab-section powerbi-section">
+          @if ((departamento() as any)?.powerbi_url) {
+            <!-- Embedded iframe header -->
+            <div class="powerbi-embed-header">
+              <div class="powerbi-embed-title">
+                <div class="powerbi-embed-icon">
+                  <mat-icon>analytics</mat-icon>
+                </div>
+                <div>
+                  <h2>{{ (departamento() as any)?.powerbi_label || 'Dashboard Interactivo' }}</h2>
+                  <p>Dashboard embebido — interactúa directamente con los datos</p>
+                </div>
+              </div>
+              <div class="powerbi-embed-actions">
+                <a
+                  mat-stroked-button
+                  [href]="(departamento() as any)!.powerbi_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn-powerbi-external"
+                  title="Abrir en pantalla completa"
+                >
+                  <mat-icon>open_in_new</mat-icon>
+                  Pantalla completa
+                </a>
+              </div>
+            </div>
+
+            <!-- iFrame container -->
+            <div class="powerbi-iframe-container">
+              <div class="powerbi-loading-overlay" [class.hidden]="iframeLoaded()">
+                <mat-spinner diameter="40"></mat-spinner>
+                <span>Cargando dashboard…</span>
+              </div>
+              <iframe
+                [src]="powerbiSafeUrl()"
+                class="powerbi-iframe"
+                frameborder="0"
+                allowfullscreen
+                (load)="onIframeLoad()"
+                title="Dashboard Power BI"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation"
+              ></iframe>
+            </div>
+
+          } @else {
+            <!-- Unavailable state -->
+            <div class="powerbi-card">
+              <div class="powerbi-icon">
+                <mat-icon>analytics</mat-icon>
+              </div>
+              <div class="powerbi-info">
+                <h2>Dashboard Interactivo</h2>
+                <p>Accede al dashboard de Power BI para explorar los datos de este observatorio con gráficos dinámicos y filtros avanzados.</p>
+                <div class="powerbi-unavailable">
+                  <mat-icon>schedule</mat-icon>
+                  <span>Dashboard en construcción — próximamente disponible</span>
+                </div>
+              </div>
+            </div>
+          }
+        </section>
+      </mat-tab>
+
+      <!-- ── Tab: Reportes ─────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>analytics</mat-icon>
+          <span>Reportes</span>
         </ng-template>
 
         <section class="tab-section reportes-section">
@@ -258,9 +333,9 @@
                           </a>
                         }
                         @if (rep.ficha_indicador) {
-                          <a mat-stroked-button [href]="rep.ficha_indicador" target="_blank" class="btn-leer">
+                          <a mat-stroked-button [href]="rep.ficha_indicador" [download]="rep.nombre_indicador + '.pdf'" class="btn-descargar">
                             <mat-icon>download</mat-icon>
-                            Ficha
+                            Descargar ficha
                           </a>
                         }
                       </div>

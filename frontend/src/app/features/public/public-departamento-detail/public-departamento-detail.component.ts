@@ -16,6 +16,7 @@ import { DepartamentoService } from '@core/services/departamento.service';
 import { ArticulosService, Articulo } from '@core/services/articulos.service';
 import { ReportesService, Reporte } from '@core/services/reportes.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-public-departamento-detail',
@@ -44,11 +45,13 @@ export class PublicDepartamentoDetailComponent implements OnInit {
   private readonly articulosService = inject(ArticulosService);
   private readonly reportesService = inject(ReportesService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly sanitizer = inject(DomSanitizer);
 
   departamento = signal<Departamento | null>(null);
   articulos = signal<Articulo[]>([]);
   reportes = signal<Reporte[]>([]);
   loading = signal(true);
+  iframeLoaded = signal(false);
   datasetSearchTerm = '';
 
   deptoGradient = 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)';
@@ -68,6 +71,17 @@ export class PublicDepartamentoDetailComponent implements OnInit {
   reportesAgrupados = computed(() =>
     this.reportesService.agruparPorCategoria(this.reportes())
   );
+
+  /** URL segura para el iframe de PowerBI */
+  powerbiSafeUrl = computed((): SafeResourceUrl | null => {
+    const url = (this.departamento() as any)?.powerbi_url;
+    if (!url) return null;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  onIframeLoad(): void {
+    this.iframeLoaded.set(true);
+  }
 
   get datasets(): Dataset[] {
     const all = this.departamento()?.datasets || [];
@@ -94,6 +108,7 @@ export class PublicDepartamentoDetailComponent implements OnInit {
   }
 
   loadDepartamento(id: string): void {
+    this.iframeLoaded.set(false);
     this.deptoService.getPublicById(id).subscribe({
       next: (depto) => {
         this.departamento.set(depto);
