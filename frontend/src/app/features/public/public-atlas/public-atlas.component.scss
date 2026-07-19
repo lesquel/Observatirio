@@ -163,6 +163,14 @@
   color: white;
 }
 
+/* Reportes tab card cover — misma altura que .card-cover para que ambas pestañas se vean consistentes */
+.reportes-section .articulo-cover {
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+  box-sizing: border-box;
+}
+
 .cover-pattern {
   position: absolute;
   top: 0;
@@ -489,6 +497,61 @@
 
   ::ng-deep .mat-mdc-tab-body-wrapper {
     background: transparent;
+  }
+}
+
+@media (max-width: 640px) {
+  .reportes-section {
+    ::ng-deep .articulos-grid {
+      grid-template-columns: 1fr !important;
+      gap: 1.25rem !important;
+    }
+
+    ::ng-deep .articulo-actions {
+      flex-direction: column;
+
+      a, button {
+        width: 100%;
+      }
+    }
+  }
+
+  .atlas-tabs {
+    ::ng-deep .mat-mdc-tab-header {
+      padding: 0 0.5rem;
+    }
+
+    ::ng-deep .mat-mdc-tab {
+      min-width: 0;
+      flex: 1 1 0;
+      padding: 0 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    ::ng-deep .mdc-tab__content {
+      min-width: 0;
+    }
+
+    ::ng-deep .mdc-tab__text-label {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      min-width: 0;
+
+      span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      mat-icon {
+        flex-shrink: 0;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
   }
 }
 

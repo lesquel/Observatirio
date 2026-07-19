@@ -177,16 +177,17 @@
                         </div>
                       </div>
                       <!-- Actions -->
-                      @if (art.enlace) {
+                      @if (esUrlValida(art.enlace)) {
                         <div class="articulo-actions">
-                          <a mat-flat-button [href]="art.enlace" target="_blank" class="btn-leer">
-                            <mat-icon>open_in_new</mat-icon>
+                          <button
+                            mat-flat-button
+                            type="button"
+                            (click)="abrirArchivo(art.enlace, art.titulo)"
+                            class="btn-leer"
+                          >
+                            <mat-icon>visibility</mat-icon>
                             Leer artículo
-                          </a>
-                          <a mat-stroked-button [href]="art.enlace" [download]="art.titulo + '.pdf'" class="btn-descargar">
-                            <mat-icon>download</mat-icon>
-                            Descargar
-                          </a>
+                          </button>
                         </div>
                       }
                     </div>
@@ -212,7 +213,7 @@
         </ng-template>
 
         <section class="tab-section powerbi-section">
-          @if ((departamento() as any)?.powerbi_url) {
+          @if (departamento()?.powerbi_url) {
             <!-- Embedded iframe header -->
             <div class="powerbi-embed-header">
               <div class="powerbi-embed-title">
@@ -220,14 +221,14 @@
                   <mat-icon>analytics</mat-icon>
                 </div>
                 <div>
-                  <h2>{{ (departamento() as any)?.powerbi_label || 'Dashboard Interactivo' }}</h2>
+                  <h2>{{ departamento()?.powerbi_label || 'Dashboard Interactivo' }}</h2>
                   <p>Dashboard embebido — interactúa directamente con los datos</p>
                 </div>
               </div>
               <div class="powerbi-embed-actions">
                 <a
                   mat-stroked-button
-                  [href]="(departamento() as any)!.powerbi_url"
+                  [href]="departamento()!.powerbi_url"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="btn-powerbi-external"
@@ -332,11 +333,16 @@
                             Ver en PowerBI
                           </a>
                         }
-                        @if (rep.ficha_indicador) {
-                          <a mat-stroked-button [href]="rep.ficha_indicador" [download]="rep.nombre_indicador + '.pdf'" class="btn-descargar">
-                            <mat-icon>download</mat-icon>
-                            Descargar ficha
-                          </a>
+                        @if (esUrlValida(rep.ficha_indicador)) {
+                          <button
+                            mat-stroked-button
+                            type="button"
+                            (click)="abrirArchivo(rep.ficha_indicador, rep.nombre_indicador)"
+                            class="btn-descargar"
+                          >
+                            <mat-icon>picture_as_pdf</mat-icon>
+                            Ver ficha
+                          </button>
                         }
                       </div>
                     </div>
@@ -355,6 +361,11 @@
       </mat-tab>
 
     </mat-tab-group>
+
+    <app-file-viewer-modal
+      [archivo]="archivoAbierto()"
+      (cerrar)="archivoAbierto.set(null)"
+    ></app-file-viewer-modal>
 
   } @else {
     <!-- Error state -->

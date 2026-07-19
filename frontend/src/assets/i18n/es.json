@@ -614,7 +614,7 @@
     "allDatasets": {
       "title": "Todos los Conjuntos de Datos Públicos",
       "subtitle": "Explora todos los conjuntos de datos disponibles",
-      "search": "Buscar conjuntos de datos por nombre...",
+      "search": "Buscar por nombre...",
       "resultsCount": "{{count}} conjunto(s) de datos encontrado(s)",
       "loading": "Cargando conjuntos de datos...",
       "empty": "No hay conjuntos de datos públicos disponibles",

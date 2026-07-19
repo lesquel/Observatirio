@@ -1,0 +1,25 @@
+@if (archivo) {
+  <div class="file-viewer-overlay" (click)="onCerrar()">
+    <div class="file-viewer-modal" (click)="$event.stopPropagation()">
+      <div class="file-viewer-header">
+        <h3>{{ archivo.nombre }}</h3>
+        <button mat-icon-button type="button" (click)="onCerrar()" title="Cerrar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="file-viewer-body">
+        <div class="file-viewer-loading" [class.hidden]="iframeLoaded()">
+          <mat-spinner diameter="40"></mat-spinner>
+          <span>Cargando…</span>
+        </div>
+        <iframe
+          [src]="safeUrl"
+          class="file-viewer-iframe"
+          frameborder="0"
+          (load)="onIframeLoad()"
+          [title]="archivo.nombre"
+        ></iframe>
+      </div>
+    </div>
+  </div>
+}

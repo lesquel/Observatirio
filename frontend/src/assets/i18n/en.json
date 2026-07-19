@@ -614,7 +614,7 @@
     "allDatasets": {
       "title": "All Datasets",
       "subtitle": "Explore all available public datasets",
-      "search": "Search datasets by name...",
+      "search": "Search by name...",
       "resultsCount": "{{count}} dataset(s) found",
       "loading": "Loading datasets...",
       "empty": "No public datasets available",

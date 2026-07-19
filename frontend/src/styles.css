@@ -210,11 +210,13 @@
 html {
   height: 100%;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   height: 100%;
   margin: 0;
+  overflow-x: hidden;
   font-family:
     'Inter',
     system-ui,
@@ -1802,7 +1804,7 @@ body:has(.mobile-sidebar-overlay) {
 }
 
 
-/* Mejoras robustas para el scroll del sidebar en móviles (iOS Safari, etc) */
+/* Mejoras robustas para el scroll del sidebar en mï¿½viles (iOS Safari, etc) */
 html:has(.mobile-sidebar-overlay),
 body:has(.mobile-sidebar-overlay) {
   overflow: hidden !important;

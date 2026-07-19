@@ -17,6 +17,7 @@ import { ArticulosService, Articulo } from '@core/services/articulos.service';
 import { ReportesService, Reporte } from '@core/services/reportes.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { ArchivoVisor, FileViewerModalComponent } from '@shared/components/file-viewer-modal/file-viewer-modal.component';
 
 @Component({
   selector: 'app-public-departamento-detail',
@@ -34,6 +35,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
     MatChipsModule,
     MatTabsModule,
     TranslateModule,
+    FileViewerModalComponent,
   ],
   templateUrl: './public-departamento-detail.component.html',
   styleUrl: './public-departamento-detail.component.scss',
@@ -53,6 +55,9 @@ export class PublicDepartamentoDetailComponent implements OnInit {
   loading = signal(true);
   iframeLoaded = signal(false);
   datasetSearchTerm = '';
+
+  /** Archivo (ficha/artículo) abierto en el visor embebido, sin salir de la app instalada */
+  archivoAbierto = signal<ArchivoVisor | null>(null);
 
   deptoGradient = 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)';
 
@@ -74,13 +79,23 @@ export class PublicDepartamentoDetailComponent implements OnInit {
 
   /** URL segura para el iframe de PowerBI */
   powerbiSafeUrl = computed((): SafeResourceUrl | null => {
-    const url = (this.departamento() as any)?.powerbi_url;
+    const url = this.departamento()?.powerbi_url;
     if (!url) return null;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
   onIframeLoad(): void {
     this.iframeLoaded.set(true);
+  }
+
+  /** Evita enlaces/rutas relativas rotas (ej. nombres de archivo sueltos sin http/https) */
+  esUrlValida(url: string | null | undefined): url is string {
+    return !!url && /^https?:\/\//i.test(url);
+  }
+
+  /** Abre un artículo/ficha en el visor embebido, en vez de navegar a otro origen */
+  abrirArchivo(url: string, nombre: string): void {
+    this.archivoAbierto.set({ url, nombre });
   }
 
   get datasets(): Dataset[] {

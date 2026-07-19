@@ -11,4 +11,6 @@ export interface Departamento {
   updated_at: string;
   datasets?: Dataset[];
   datasets_count?: number;
+  powerbi_url?: string | null;
+  powerbi_label?: string | null;
 }

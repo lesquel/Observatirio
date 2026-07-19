@@ -14,6 +14,7 @@ import { ArticulosService, Articulo } from '@core/services/articulos.service';
 import { ReportesService, Reporte } from '@core/services/reportes.service';
 import { AuthService } from '@core/services/auth.service';
 import { PermisosService } from '@core/services/permisos.service';
+import { ArchivoVisor, FileViewerModalComponent } from '@shared/components/file-viewer-modal/file-viewer-modal.component';
 
 @Component({
   selector: 'app-public-atlas',
@@ -28,6 +29,7 @@ import { PermisosService } from '@core/services/permisos.service';
     MatChipsModule,
     MatTabsModule,
     TranslateModule,
+    FileViewerModalComponent,
   ],
   templateUrl: './public-atlas.component.html',
   styleUrl: './public-atlas.component.scss',
@@ -41,6 +43,9 @@ export class PublicAtlasComponent implements OnInit {
 
   searchTerm = signal('');
   selectedCategory = signal<string>('TODAS');
+
+  /** Archivo abierto en el visor embebido, sin salir de la app instalada */
+  archivoAbierto = signal<ArchivoVisor | null>(null);
 
   articulos = signal<Articulo[]>([]);
   reportes = signal<Reporte[]>([]);
@@ -163,5 +168,15 @@ export class PublicAtlasComponent implements OnInit {
 
   sugerirSuscripcion(): void {
     alert('Esta publicación es exclusiva para suscriptores. Inicia sesión o suscríbete para acceder al contenido.');
+  }
+
+  /** Evita enlaces/rutas relativas rotas (ej. nombres de archivo sueltos sin http/https) */
+  esUrlValida(url: string | null | undefined): url is string {
+    return !!url && /^https?:\/\//i.test(url);
+  }
+
+  /** Abre una publicación en el visor embebido, en vez de navegar a otro origen */
+  abrirArchivo(url: string, nombre: string): void {
+    this.archivoAbierto.set({ url, nombre });
   }
 }
