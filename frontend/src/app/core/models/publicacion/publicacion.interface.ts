@@ -1,9 +1,9 @@
-﻿export type TipoPublicacion = 'ARTICULO' | 'REPORTE' | 'ATLAS';
+export type TipoPublicacion = 'ARTICULO' | 'REPORTE' | 'ATLAS';
 
 export interface ObservatorioPublicacion {
   id: string;
   departamento_id: string;
-  tipo: Exclude<TipoPublicacion, 'ATLAS'>;
+  tipo: TipoPublicacion;
   codigo: string;
   titulo: string;
   fecha_publicacion: string;
@@ -11,6 +11,7 @@ export interface ObservatorioPublicacion {
   descripcion?: string | null;
   autores?: string | null;
   fuente: string;
+  visibilidad?: 'publico' | 'suscriptor' | 'privado';
   nombre_archivo_original: string;
   download_url: string;
   created_at: string;

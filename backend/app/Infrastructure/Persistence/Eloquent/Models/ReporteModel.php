@@ -48,4 +48,58 @@ class ReporteModel extends Model
     {
         return $query->where('departamento_id', $departamentoId);
     }
+
+    /**
+     * Scope: filtrar por visibilidad según el usuario.
+     *
+     * - Guest (null): solo visibilidad = 'publico'
+     * - ADMIN: sin filtro
+     * - SUBSCRIBER: visibilidad IN ('publico', 'suscriptor')
+     * - Miembro de departamento: público + suscriptor + privado de su depto
+     */
+    public function scopeVisibleFor(Builder $query, ?\App\Models\User $user): void
+    {
+        if ($user === null) {
+            $query->whereIn('visibilidad', ['publico', 'suscriptor']);
+            return;
+        }
+
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        // Si tiene permiso global (sin depto) en atlas o reportes, ve todo
+        $hasGlobalPermiso = \Illuminate\Support\Facades\DB::table('permisos')
+            ->where('user_id', $user->id)
+            ->whereIn('modulo', ['atlas', 'reportes'])
+            ->whereNull('departamento_id')
+            ->where('nivel', '!=', 'ninguno')
+            ->exists();
+
+        if ($hasGlobalPermiso) {
+            return;
+        }
+
+        $query->where(function (Builder $q) use ($user): void {
+            $q->whereIn('visibilidad', ['publico', 'suscriptor']);
+
+            $q->orWhere(function (Builder $sub) use ($user): void {
+                $sub->where('visibilidad', 'privado')
+                    ->where(function (Builder $subQ) use ($user): void {
+                        $subQ->whereIn('departamento_id', function ($q) use ($user): void {
+                            $q->select('departamento_id')
+                                ->from('usuario_departamento')
+                                ->where('user_id', $user->id);
+                        });
+                        $subQ->orWhereIn('departamento_id', function ($q) use ($user): void {
+                            $q->select('departamento_id')
+                                ->from('permisos')
+                                ->where('user_id', $user->id)
+                                ->whereIn('modulo', ['atlas', 'reportes'])
+                                ->where('nivel', '!=', 'ninguno');
+                        });
+                    });
+            });
+        });
+    }
 }

@@ -20,6 +20,7 @@ class PublicacionResource extends JsonResource
             'descripcion' => $this->descripcion,
             'autores' => $this->autores,
             'fuente' => $this->fuente,
+            'visibilidad' => $this->visibilidad ?? 'publico',
             'nombre_archivo_original' => $this->nombre_archivo_original,
             'download_url' => "/api/departamentos/publicaciones/{$this->id}/download",
             'created_at' => $this->created_at?->toIso8601String(),

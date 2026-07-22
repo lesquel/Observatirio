@@ -79,7 +79,12 @@
       @for (art of filteredArticulos(); track art.id) {
         <div class="publication-card" [class.locked]="!tieneAcceso(art)">
           <!-- Card Header & Cover simulation -->
-          <div class="card-cover" [style.background]="'linear-gradient(135deg, ' + getCategoryColor(art.categoria?.nombre || '') + ' 0%, #1e1b4b 100%)'">
+          <div
+            class="card-cover"
+            [style.background]="'linear-gradient(135deg, ' + getCategoryColor(art.categoria?.nombre || '') + ' 0%, #1e1b4b 100%)'"
+            [style.cursor]="esUrlValida(art.enlace) ? 'pointer' : 'default'"
+            (click)="esUrlValida(art.enlace) ? abrirArchivo(art.enlace, art.titulo, !tieneAcceso(art)) : null"
+          >
             <div class="cover-pattern"></div>
             @if (art.visibilidad === 'suscriptor') {
               <span class="subscription-badge">
@@ -135,10 +140,22 @@
                   Visualizar
                 </button>
               } @else {
-                <button mat-flat-button color="accent" class="action-btn view-btn locked-btn" (click)="sugerirSuscripcion()">
-                  <mat-icon>lock</mat-icon>
-                  Suscribirse
-                </button>
+                <div style="display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    (click)="abrirArchivo(art.enlace, art.titulo, true)"
+                    class="action-btn view-btn"
+                    style="flex: 1;"
+                  >
+                    <mat-icon>visibility</mat-icon>
+                    Vista Previa
+                  </button>
+                  <button mat-flat-button color="accent" class="action-btn view-btn locked-btn" style="flex: 1;" (click)="sugerirSuscripcion()">
+                    <mat-icon>lock</mat-icon>
+                    Suscribirse
+                  </button>
+                </div>
               }
             }
           </div>
@@ -176,7 +193,13 @@
               @for (rep of grupo.items; track rep.id) {
                 <div class="articulo-card" [class.locked]="!tieneAcceso(rep)" style="background: white; border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); display: flex; flex-direction: column; position: relative;">
                   <!-- Cover -->
-                  <div class="articulo-cover" [style.background]="'linear-gradient(135deg, ' + grupo.color + ' 0%, #1e1b4b 100%)'" style="padding: 1.25rem; position: relative; color: white;">
+                  <div
+                    class="articulo-cover"
+                    [style.background]="'linear-gradient(135deg, ' + grupo.color + ' 0%, #1e1b4b 100%)'"
+                    [style.cursor]="esUrlValida(rep.ficha_indicador || rep.link_url) ? 'pointer' : 'default'"
+                    (click)="esUrlValida(rep.ficha_indicador || rep.link_url) ? abrirArchivo(rep.ficha_indicador || rep.link_url!, rep.nombre_indicador, !tieneAcceso(rep)) : null"
+                    style="padding: 1.25rem; position: relative; color: white;"
+                  >
                     <div class="cover-pattern"></div>
                     @if (rep.visibilidad === 'suscriptor') {
                       <span class="subscription-badge" style="position: absolute; top: 1rem; left: 1rem; background: rgba(200, 16, 46, 0.95); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.725rem; display: flex; align-items: center; gap: 0.25rem; font-weight: 500; z-index: 2;">
@@ -232,10 +255,23 @@
                         </a>
                       }
                     } @else {
-                      <button mat-flat-button color="accent" style="flex: 1;" (click)="sugerirSuscripcion()">
-                        <mat-icon>lock</mat-icon>
-                        Suscribirse para acceder
-                      </button>
+                      <div style="display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
+                        @if (rep.ficha_indicador || rep.link_url) {
+                          <button
+                            mat-stroked-button
+                            type="button"
+                            (click)="abrirArchivo(rep.ficha_indicador || rep.link_url!, rep.nombre_indicador, true)"
+                            style="flex: 1;"
+                          >
+                            <mat-icon>visibility</mat-icon>
+                            Vista Previa
+                          </button>
+                        }
+                        <button mat-flat-button color="accent" style="flex: 1;" (click)="sugerirSuscripcion()">
+                          <mat-icon>lock</mat-icon>
+                          Suscribirse
+                        </button>
+                      </div>
                     }
                   </div>
                 </div>

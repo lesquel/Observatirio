@@ -147,8 +147,19 @@
                   @for (art of grupo.items; track art.id) {
                     <div class="articulo-card">
                       <!-- Cover -->
-                      <div class="articulo-cover" [style.background]="'linear-gradient(135deg, ' + grupo.color + ' 0%, #1e1b4b 100%)'">
+                      <div
+                        class="articulo-cover"
+                        [style.background]="'linear-gradient(135deg, ' + grupo.color + ' 0%, #1e1b4b 100%)'"
+                        [style.cursor]="esUrlValida(art.enlace) ? 'pointer' : 'default'"
+                        (click)="esUrlValida(art.enlace) ? abrirArchivo(art.enlace, art.titulo, !tieneAcceso(art)) : null"
+                      >
                         <div class="cover-pattern"></div>
+                        @if (art.visibilidad === 'suscriptor') {
+                          <span class="subscription-badge" style="position: absolute; top: 1rem; left: 1rem; background: rgba(200, 16, 46, 0.95); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.725rem; display: flex; align-items: center; gap: 0.25rem; font-weight: 500; z-index: 2;">
+                            <mat-icon style="font-size: 0.875rem; width: 0.875rem; height: 0.875rem;">lock</mat-icon>
+                            Suscriptor
+                          </span>
+                        }
                         <span class="articulo-categoria-badge">
                           <mat-icon>label</mat-icon>
                           {{ art.categoria?.nombre || 'Sin categoría' }}
@@ -179,15 +190,33 @@
                       <!-- Actions -->
                       @if (esUrlValida(art.enlace)) {
                         <div class="articulo-actions">
-                          <button
-                            mat-flat-button
-                            type="button"
-                            (click)="abrirArchivo(art.enlace, art.titulo)"
-                            class="btn-leer"
-                          >
-                            <mat-icon>visibility</mat-icon>
-                            Leer artículo
-                          </button>
+                          @if (tieneAcceso(art)) {
+                            <button
+                              mat-flat-button
+                              type="button"
+                              (click)="abrirArchivo(art.enlace, art.titulo)"
+                              class="btn-leer"
+                            >
+                              <mat-icon>visibility</mat-icon>
+                              Leer artículo
+                            </button>
+                          } @else {
+                            <div style="display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
+                              <button
+                                mat-stroked-button
+                                type="button"
+                                (click)="abrirArchivo(art.enlace, art.titulo, true)"
+                                style="flex: 1;"
+                              >
+                                <mat-icon>visibility</mat-icon>
+                                Vista Previa
+                              </button>
+                              <button mat-flat-button color="accent" style="flex: 1;" (click)="sugerirSuscripcion()">
+                                <mat-icon>lock</mat-icon>
+                                Suscribirse
+                              </button>
+                            </div>
+                          }
                         </div>
                       }
                     </div>
@@ -296,8 +325,19 @@
                   @for (rep of grupo.items; track rep.id) {
                     <div class="articulo-card">
                       <!-- Cover -->
-                      <div class="articulo-cover" [style.background]="'linear-gradient(135deg, ' + grupo.color + ' 0%, #1e1b4b 100%)'">
+                      <div
+                        class="articulo-cover"
+                        [style.background]="'linear-gradient(135deg, ' + grupo.color + ' 0%, #1e1b4b 100%)'"
+                        [style.cursor]="esUrlValida(rep.ficha_indicador || rep.link_url) ? 'pointer' : 'default'"
+                        (click)="esUrlValida(rep.ficha_indicador || rep.link_url) ? abrirArchivo(rep.ficha_indicador || rep.link_url!, rep.nombre_indicador, !tieneAcceso(rep)) : null"
+                      >
                         <div class="cover-pattern"></div>
+                        @if (rep.visibilidad === 'suscriptor') {
+                          <span class="subscription-badge" style="position: absolute; top: 1rem; left: 1rem; background: rgba(200, 16, 46, 0.95); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.725rem; display: flex; align-items: center; gap: 0.25rem; font-weight: 500; z-index: 2;">
+                            <mat-icon style="font-size: 0.875rem; width: 0.875rem; height: 0.875rem;">lock</mat-icon>
+                            Suscriptor
+                          </span>
+                        }
                         <span class="articulo-categoria-badge">
                           <mat-icon>analytics</mat-icon>
                           {{ rep.categoria?.nombre || 'Sin categoría' }}
@@ -327,22 +367,42 @@
                       </div>
                       <!-- Actions -->
                       <div class="articulo-actions">
-                        @if (rep.link_url) {
-                          <a mat-flat-button [href]="rep.link_url" target="_blank" class="btn-powerbi">
-                            <mat-icon>open_in_new</mat-icon>
-                            Ver en PowerBI
-                          </a>
-                        }
-                        @if (esUrlValida(rep.ficha_indicador)) {
-                          <button
-                            mat-stroked-button
-                            type="button"
-                            (click)="abrirArchivo(rep.ficha_indicador, rep.nombre_indicador)"
-                            class="btn-descargar"
-                          >
-                            <mat-icon>picture_as_pdf</mat-icon>
-                            Ver ficha
-                          </button>
+                        @if (tieneAcceso(rep)) {
+                          @if (rep.link_url) {
+                            <a mat-flat-button [href]="rep.link_url" target="_blank" class="btn-powerbi">
+                              <mat-icon>open_in_new</mat-icon>
+                              Ver en PowerBI
+                            </a>
+                          }
+                          @if (esUrlValida(rep.ficha_indicador)) {
+                            <button
+                              mat-stroked-button
+                              type="button"
+                              (click)="abrirArchivo(rep.ficha_indicador, rep.nombre_indicador)"
+                              class="btn-descargar"
+                            >
+                              <mat-icon>picture_as_pdf</mat-icon>
+                              Ver ficha
+                            </button>
+                          }
+                        } @else {
+                          <div style="display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
+                            @if (rep.ficha_indicador || rep.link_url) {
+                              <button
+                                mat-stroked-button
+                                type="button"
+                                (click)="abrirArchivo(rep.ficha_indicador || rep.link_url!, rep.nombre_indicador, true)"
+                                style="flex: 1;"
+                              >
+                                <mat-icon>visibility</mat-icon>
+                                Vista Previa
+                              </button>
+                            }
+                            <button mat-flat-button color="accent" style="flex: 1;" (click)="sugerirSuscripcion()">
+                              <mat-icon>lock</mat-icon>
+                              Suscribirse
+                            </button>
+                          </div>
                         }
                       </div>
                     </div>

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, DestroyRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -40,6 +41,7 @@ export class PublicAtlasComponent implements OnInit {
   private readonly reportesService = inject(ReportesService);
   private readonly authService = inject(AuthService);
   private readonly permisosService = inject(PermisosService);
+  private readonly router = inject(Router);
 
   searchTerm = signal('');
   selectedCategory = signal<string>('TODAS');
@@ -54,10 +56,18 @@ export class PublicAtlasComponent implements OnInit {
   canCreate = computed(() => {
     const user = this.authService.user();
     if (!user) return false;
-    return this.permisosService.puedeEditar(user.id, 'atlas');
+    return (
+      this.permisosService.puedeEditar(user.id, 'articulos') ||
+      this.permisosService.puedeEditar(user.id, 'atlas') ||
+      this.permisosService.puedeEditar(user.id, 'reportes')
+    );
   });
 
   ngOnInit(): void {
+    const user = this.authService.user();
+    if (user) {
+      this.permisosService.syncFromBackend(user.id).subscribe();
+    }
     this.loadData();
   }
 
@@ -76,13 +86,19 @@ export class PublicAtlasComponent implements OnInit {
   canEdit(item: Articulo | Reporte): boolean {
     const user = this.authService.user();
     if (!user) return false;
-    return this.permisosService.puedeEditar(user.id, 'atlas');
+    if ('categoria' in item || 'autores' in item) {
+      return this.permisosService.puedeEditar(user.id, 'articulos');
+    }
+    return this.permisosService.puedeEditar(user.id, 'reportes');
   }
 
   canDelete(item: Articulo | Reporte): boolean {
     const user = this.authService.user();
     if (!user) return false;
-    return this.permisosService.esAdmin(user.id, 'atlas');
+    if ('categoria' in item || 'autores' in item) {
+      return this.permisosService.esAdmin(user.id, 'articulos');
+    }
+    return this.permisosService.esAdmin(user.id, 'reportes');
   }
 
   // ── Artículos (Publicaciones) ──
@@ -163,20 +179,35 @@ export class PublicAtlasComponent implements OnInit {
     const user = this.authService.user();
     if (!user) return false;
 
-    return ['ADMIN', 'EDITOR', 'SUBSCRIBER'].includes(user.rol);
+    return (
+      user.rol === 'SUBSCRIBER' ||
+      user.rol === 'ADMIN' ||
+      user.rol === 'EDITOR' ||
+      this.canEdit(item)
+    );
   }
 
   sugerirSuscripcion(): void {
-    alert('Esta publicación es exclusiva para suscriptores. Inicia sesión o suscríbete para acceder al contenido.');
+    this.router.navigate(['/auth/login']);
   }
 
-  /** Evita enlaces/rutas relativas rotas (ej. nombres de archivo sueltos sin http/https) */
+  /** Permite enlaces absolutos y rutas de archivos locales */
   esUrlValida(url: string | null | undefined): url is string {
-    return !!url && /^https?:\/\//i.test(url);
+    return !!url && url.trim().length > 0;
+  }
+
+  /** Formatea URLs absolutas y relativas (/1-recuperacion-economica.pdf) */
+  obtenerUrlVisor(url: string): string {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    return url.startsWith('/') ? url : `/${url}`;
   }
 
   /** Abre una publicación en el visor embebido, en vez de navegar a otro origen */
-  abrirArchivo(url: string, nombre: string): void {
-    this.archivoAbierto.set({ url, nombre });
+  abrirArchivo(url: string, nombre: string, esPreview = false): void {
+    const finalUrl = this.obtenerUrlVisor(url);
+    this.archivoAbierto.set({ url: finalUrl, nombre, esPreview });
   }
 }
+
+

@@ -21,11 +21,12 @@ class UpdatePublicacionRequest extends FormRequest
             'link_url' => ['required', 'url:http,https', 'max:2048'],
             'descripcion' => ['required', 'string', 'max:3000'],
             'autores' => [
-                $this->route('publicacion')?->tipo === 'ARTICULO' ? 'required' : 'nullable',
+                in_array($this->route('publicacion')?->tipo, ['ARTICULO', 'ATLAS'], true) ? 'required' : 'nullable',
                 'string',
                 'max:1000',
             ],
             'fuente' => ['required', 'string', 'max:255'],
+            'visibilidad' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['publico', 'suscriptor', 'privado'])],
             'archivo' => ['nullable', 'file', 'mimetypes:application/pdf,application/x-pdf', 'mimes:pdf', 'max:20480'],
         ];
     }

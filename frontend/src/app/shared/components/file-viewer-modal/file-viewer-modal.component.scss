@@ -30,6 +30,13 @@
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--card-border);
 
+  .header-title-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    overflow: hidden;
+  }
+
   h3 {
     margin: 0;
     font-size: 1rem;
@@ -38,6 +45,61 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .preview-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.6rem;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+.preview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.65rem 1.25rem;
+  background: linear-gradient(135deg, rgba(200, 16, 46, 0.9) 0%, rgba(99, 102, 241, 0.9) 100%);
+  color: #ffffff;
+  font-size: 0.85rem;
+
+  .banner-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .banner-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .subscribe-btn {
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: var(--radius-md, 8px);
+    
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
   }
 }
 

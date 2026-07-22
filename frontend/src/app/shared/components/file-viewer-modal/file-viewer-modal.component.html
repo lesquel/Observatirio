@@ -2,11 +2,31 @@
   <div class="file-viewer-overlay" (click)="onCerrar()">
     <div class="file-viewer-modal" (click)="$event.stopPropagation()">
       <div class="file-viewer-header">
-        <h3>{{ archivo.nombre }}</h3>
+        <div class="header-title-container">
+          <h3>{{ archivo.nombre }}</h3>
+          @if (archivo.esPreview) {
+            <span class="preview-tag">
+              <mat-icon>lock</mat-icon> Vista Previa
+            </span>
+          }
+        </div>
         <button mat-icon-button type="button" (click)="onCerrar()" title="Cerrar">
           <mat-icon>close</mat-icon>
         </button>
       </div>
+
+      @if (archivo.esPreview) {
+        <div class="preview-banner">
+          <div class="banner-text">
+            <mat-icon class="banner-icon">info</mat-icon>
+            <span>Estás viendo la <strong>vista previa de la 1ª página</strong>. Suscríbete para acceder al contenido completo.</span>
+          </div>
+          <button mat-flat-button color="accent" class="subscribe-btn" (click)="onSuscribirse()">
+            <mat-icon>stars</mat-icon> Obtener Suscripción
+          </button>
+        </div>
+      }
+
       <div class="file-viewer-body">
         <div class="file-viewer-loading" [class.hidden]="iframeLoaded()">
           <mat-spinner diameter="40"></mat-spinner>
@@ -23,3 +43,4 @@
     </div>
   </div>
 }
+

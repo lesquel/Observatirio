@@ -10,11 +10,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dataset, Departamento } from '@core/models';
 import { DepartamentoService } from '@core/services/departamento.service';
 import { ArticulosService, Articulo } from '@core/services/articulos.service';
 import { ReportesService, Reporte } from '@core/services/reportes.service';
+import { AuthService } from '@core/services/auth.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ArchivoVisor, FileViewerModalComponent } from '@shared/components/file-viewer-modal/file-viewer-modal.component';
@@ -43,9 +44,11 @@ import { ArchivoVisor, FileViewerModalComponent } from '@shared/components/file-
 export class PublicDepartamentoDetailComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly deptoService = inject(DepartamentoService);
   private readonly articulosService = inject(ArticulosService);
   private readonly reportesService = inject(ReportesService);
+  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly sanitizer = inject(DomSanitizer);
 
@@ -88,14 +91,36 @@ export class PublicDepartamentoDetailComponent implements OnInit {
     this.iframeLoaded.set(true);
   }
 
-  /** Evita enlaces/rutas relativas rotas (ej. nombres de archivo sueltos sin http/https) */
+  tieneAcceso(item: Articulo | Reporte): boolean {
+    const vis = item.visibilidad || 'publico';
+    if (vis === 'publico') return true;
+
+    const user = this.authService.user();
+    if (!user) return false;
+
+    return user.rol === 'SUBSCRIBER' || user.rol === 'ADMIN' || user.rol === 'EDITOR';
+  }
+
+  sugerirSuscripcion(): void {
+    this.router.navigate(['/auth/login']);
+  }
+
+  /** Permite enlaces absolutos y rutas de archivos locales */
   esUrlValida(url: string | null | undefined): url is string {
-    return !!url && /^https?:\/\//i.test(url);
+    return !!url && url.trim().length > 0;
+  }
+
+  /** Formatea URLs absolutas y relativas (/1-recuperacion-economica.pdf) */
+  obtenerUrlVisor(url: string): string {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    return url.startsWith('/') ? url : `/${url}`;
   }
 
   /** Abre un artículo/ficha en el visor embebido, en vez de navegar a otro origen */
-  abrirArchivo(url: string, nombre: string): void {
-    this.archivoAbierto.set({ url, nombre });
+  abrirArchivo(url: string, nombre: string, esPreview = false): void {
+    const finalUrl = this.obtenerUrlVisor(url);
+    this.archivoAbierto.set({ url: finalUrl, nombre, esPreview });
   }
 
   get datasets(): Dataset[] {
