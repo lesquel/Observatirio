@@ -21,4 +21,14 @@ interface UserRepositoryInterface
     public function attachDepartamento(int $userId, string $departamentoId, string $rol): void;
     
     public function detachDepartamento(int $userId, string $departamentoId): void;
+
+    /**
+     * Asigna exactamente un departamento al usuario (reemplaza cualquier asignación previa).
+     */
+    public function syncSingleDepartamento(int $userId, string $departamentoId, string $rol = 'EDITOR'): void;
+
+    /**
+     * Quita todas las asignaciones de departamento del usuario.
+     */
+    public function clearDepartamentos(int $userId): void;
 }

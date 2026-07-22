@@ -8,9 +8,7 @@ export interface PermisoConfig {
   user_id?: number;
   modulo: ModuloPermiso;
   nivel: NivelPermiso;
-  /** Solo aplica para el módulo 'observatorios':
-   *  - string = departamento específico
-   *  - null = todos los departamentos */
+  /** Solo aplica para el módulo 'observatorios': UUID del departamento asignado (uno solo). */
   departamento_id?: string | null;
 }
 
@@ -40,4 +38,17 @@ export interface UserPermisos {
 export interface SavePermisosResponse {
   message: string;
   permisos: PermisoConfig[];
+}
+
+/**
+ * Respuesta del endpoint /user/permissions (unified permissions DTO).
+ */
+export interface UserPermissionsResponse {
+  global_role: string;
+  permissions: PermisoConfig[];
+  departments: {
+    id: string;
+    nombre: string;
+    role: string | null;
+  }[];
 }

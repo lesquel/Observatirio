@@ -124,7 +124,8 @@ interface ModuloEditState {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
     }
     .modulo-icon-box {
       width: 36px; height: 36px;
@@ -146,6 +147,7 @@ interface ModuloEditState {
       flex-direction: column;
       gap: 12px;
       padding-left: 48px;
+      margin-top: 12px;
     }
     .config-row {
       display: flex;
@@ -195,6 +197,24 @@ interface ModuloEditState {
         button { justify-content: center; width: 100%; }
       }
     }
+    :host-context(.dark) {
+      .dialog-title { color: #f8fafc; mat-icon { color: #818cf8; } }
+      .user-info { background: #1e293b; border-color: rgba(255,255,255,0.1); }
+      .user-details h3 { color: #f8fafc; }
+      .user-details .email { color: #94a3b8; }
+      .modulo-card {
+        background: #1e293b;
+        border-color: rgba(255,255,255,0.1);
+        &.habilitado {
+          border-color: rgba(129,140,248,0.4);
+          box-shadow: 0 2px 8px rgba(129,140,248,0.12);
+        }
+      }
+      .modulo-icon-box { background: rgba(129,140,248,0.15); mat-icon { color: #818cf8; } }
+      .modulo-title { color: #f8fafc; }
+      .obs-hint { color: #94a3b8; }
+      .dialog-actions { border-top-color: rgba(255,255,255,0.1); }
+    }
   `],
 })
 export class UserPermissionsDialogComponent implements OnInit {
@@ -211,6 +231,10 @@ export class UserPermissionsDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCurrentConfig();
+    this.permisosService.syncFromBackend(this.user.id).subscribe({
+      next: () => this.loadCurrentConfig(),
+      error: () => this.loadCurrentConfig(),
+    });
     this.loadDepartamentos();
   }
 
@@ -269,15 +293,19 @@ export class UserPermissionsDialogComponent implements OnInit {
 
   save(): void {
     const result: PermisoConfig[] = [];
+    const observatorios = this.modules.find((m) => m.modulo === 'observatorios');
+
+    if (observatorios?.habilitado && !observatorios.departamentoId) {
+      return;
+    }
 
     for (const mod of this.modules) {
       if (mod.habilitado) {
         if (mod.modulo === 'observatorios') {
-          // Guardar "todos" como null en departamento_id
           result.push({
             modulo: mod.modulo,
             nivel: mod.nivel,
-            departamento_id: mod.departamentoId, // null = todos
+            departamento_id: mod.departamentoId,
           });
         } else {
           result.push({
@@ -286,7 +314,6 @@ export class UserPermissionsDialogComponent implements OnInit {
           });
         }
       } else {
-        // Guardar como "ninguno" para que el backend lo registre
         result.push({
           modulo: mod.modulo,
           nivel: 'ninguno',
@@ -296,6 +323,12 @@ export class UserPermissionsDialogComponent implements OnInit {
     }
 
     this.dialogRef.close(result);
+  }
+
+  canSave(): boolean {
+    const observatorios = this.modules.find((m) => m.modulo === 'observatorios');
+    if (!observatorios?.habilitado) return true;
+    return !!observatorios.departamentoId;
   }
 
   cancel(): void {

@@ -6,8 +6,10 @@ namespace App\Presentation\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticuloModel;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
@@ -28,6 +30,9 @@ class ArticuloController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = ArticuloModel::with(['categoria', 'departamento']);
+
+        // Apply visibility scope based on user authentication
+        $query->visibleFor($request->user('sanctum'));
 
         if ($request->filled('categoria_id')) {
             $query->where('categoria_id', $request->query('categoria_id'));
@@ -65,11 +70,15 @@ class ArticuloController extends Controller
             return response()->json(['message' => 'Artículo no encontrado'], 404);
         }
 
-        if ($articulo->visibilidad === 'suscriptor') {
-            $user = $request->user('sanctum');
-            if (!$user || !in_array($user->rol, ['ADMIN', 'EDITOR', 'SUBSCRIBER'])) {
+        try {
+            Gate::authorize('view', $articulo);
+        } catch (AuthorizationException) {
+            // Distinguish: privado → 404, suscriptor → 403 with paywall message
+            if ($articulo->visibilidad === 'suscriptor') {
                 return response()->json(['message' => 'Acceso exclusivo para suscriptores.'], 403);
             }
+
+            return response()->json(['message' => 'Artículo no encontrado'], 404);
         }
 
         return response()->json($articulo);
@@ -127,6 +136,8 @@ class ArticuloController extends Controller
                 'errors' => $validator->errors(),
             ], 422);
         }
+
+        Gate::authorize('create', [ArticuloModel::class, $validator->validated()['departamento_id'] ?? null]);
 
         $articulo = ArticuloModel::create($validator->validated());
         $articulo->load(['categoria', 'departamento']);
@@ -196,6 +207,8 @@ class ArticuloController extends Controller
             ], 422);
         }
 
+        Gate::authorize('update', $articulo);
+
         $articulo->update($validator->validated());
 
         return response()->json($articulo->fresh(['categoria', 'departamento']));
@@ -221,6 +234,8 @@ class ArticuloController extends Controller
         if (!$articulo) {
             return response()->json(['message' => 'Artículo no encontrado'], 404);
         }
+
+        Gate::authorize('delete', $articulo);
 
         $articulo->delete();
 

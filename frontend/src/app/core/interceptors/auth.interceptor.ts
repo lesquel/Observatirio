@@ -27,9 +27,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         // Token expirado o inválido - limpiar autenticación
         authService.clearAuthSilent();
         router.navigate(['/auth/login']);
-      } else if (error.status === 403) {
-        // Sin permisos - redirigir a dashboard
-        router.navigate(['/admin/dashboard']);
       }
       return throwError(() => error);
     })

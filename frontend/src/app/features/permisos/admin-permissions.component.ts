@@ -15,7 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { PermisosService } from '@core/services/permisos.service';
 import { UserService } from '@core/services/user.service';
 import { User } from '@core/models';
@@ -102,11 +102,21 @@ export class AdminPermissionsComponent implements OnInit {
           }
           return forkJoin(requests);
         }),
+        switchMap((responses) => {
+          const all = responses.flatMap((r) => r.data);
+          const nonAdmins = all.filter((u) => u.rol !== 'ADMIN');
+          if (nonAdmins.length === 0) {
+            return of(all);
+          }
+          return forkJoin(nonAdmins.map((u) => this.permisosService.syncFromBackend(u.id))).pipe(
+            map(() => all),
+            catchError(() => of(all)),
+          );
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (responses) => {
-          const all = responses.flatMap((r) => r.data);
+        next: (all) => {
           this.users.set(all);
           this.loadingUsers.set(false);
         },
@@ -128,7 +138,7 @@ export class AdminPermissionsComponent implements OnInit {
   }
 
   getModuloNivel(user: User, modulo: ModuloPermiso): NivelPermiso {
-    return this.permisosService.getNivel(user.id, modulo);
+    return this.permisosService.getUserNivel(user.id, modulo);
   }
 
   getNivelChipClass(nivel: NivelPermiso): string {
@@ -168,33 +178,39 @@ export class AdminPermissionsComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((result: PermisoConfig[] | undefined) => {
         if (result) {
-          this.permisosService.saveUserPermisos(user.id, result);
-          // Refresh users signal to update indicators
-          this.users.set([...this.users()]);
-          this.snackBar.open(
-            'Permisos guardados correctamente.',
-            'Cerrar',
-            { duration: 3000 },
-          );
+          this.permisosService.saveUserPermisos(user.id, result).subscribe({
+            next: () => {
+              this.users.set([...this.users()]);
+              this.snackBar.open('Permisos guardados correctamente.', 'Cerrar', { duration: 3000 });
+            },
+            error: (err) => {
+              const msg =
+                err?.error?.message ||
+                err?.error?.errors?.permisos?.[0] ||
+                'No se pudieron guardar los permisos.';
+              this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+            },
+          });
         }
       });
   }
 
   resetUserPermissions(user: User): void {
-    // Eliminar solo permisos de atlas/reportes (frontend), mantener observatorios
-    const current = this.permisosService.getUserPermisos(user.id);
-    const observatorioPermisos = current.filter((p) => p.modulo === 'observatorios');
-    const emptyFrontend: PermisoConfig[] = [
+    const empty: PermisoConfig[] = [
       { modulo: 'atlas', nivel: 'ninguno' },
+      { modulo: 'articulos', nivel: 'ninguno' },
       { modulo: 'reportes', nivel: 'ninguno' },
+      { modulo: 'observatorios', nivel: 'ninguno', departamento_id: null },
     ];
 
-    this.permisosService.saveUserPermisos(user.id, [...observatorioPermisos, ...emptyFrontend]);
-    this.users.set([...this.users()]);
-    this.snackBar.open(
-      `Permisos de ${user.name} restablecidos.`,
-      'Cerrar',
-      { duration: 3000 },
-    );
+    this.permisosService.saveUserPermisos(user.id, empty).subscribe({
+      next: () => {
+        this.users.set([...this.users()]);
+        this.snackBar.open(`Permisos de ${user.name} restablecidos.`, 'Cerrar', { duration: 3000 });
+      },
+      error: () => {
+        this.snackBar.open('No se pudieron restablecer los permisos.', 'Cerrar', { duration: 4000 });
+      },
+    });
   }
 }

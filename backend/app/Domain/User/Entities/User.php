@@ -14,6 +14,7 @@ class User
         public readonly ?\DateTimeImmutable $emailVerifiedAt = null,
         public readonly ?\DateTimeImmutable $createdAt = null,
         public readonly ?\DateTimeImmutable $updatedAt = null,
+        public readonly ?string $rol = null,
     ) {}
 
     public static function create(

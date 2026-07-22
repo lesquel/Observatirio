@@ -26,7 +26,7 @@ class LoginUseCase
         $user->tokens()->delete();
 
         // Cargar relaciones necesarias
-        $user->load(['perfil', 'departamentos', 'permisos.departamento']);
+        $user->load(['perfil', 'departamentos']);
 
         // Crear nuevo token
         $token = $user->createToken('auth-token')->plainTextToken;

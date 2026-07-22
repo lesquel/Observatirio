@@ -7,6 +7,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Departamento } from '@core/models';
 import { AuthService } from '@core/services/auth.service';
 import { DepartamentoService } from '@core/services/departamento.service';
+import { PermisosService } from '@core/services/permisos.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { IsAdminDirective } from '../../directives/is-admin.directive';
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
@@ -49,6 +50,19 @@ interface NavItem {
             <mat-icon class="nav-icon">dashboard</mat-icon>
           </div>
           <span class="nav-text">{{ 'layout.sidebar.dashboard' | translate }}</span>
+        </a>
+
+        <!-- Atlas -->
+        <a
+          class="nav-item"
+          routerLink="/admin/atlas"
+          routerLinkActive="active"
+          (click)="navigate.emit()"
+        >
+          <div class="nav-icon-wrapper">
+            <mat-icon class="nav-icon">map</mat-icon>
+          </div>
+          <span class="nav-text">Atlas</span>
         </a>
 
         <!-- Subir Dataset - admin y editor -->
@@ -198,7 +212,7 @@ interface NavItem {
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--text-tertiary);
+        color: #94a3b8;
         padding: 0 0.75rem;
         margin-bottom: 0.5rem;
       }
@@ -208,32 +222,28 @@ interface NavItem {
         align-items: center;
         justify-content: space-between;
         padding-right: 0.5rem;
-        margin-bottom: 0.5rem;
-      }
 
-      .add-btn {
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--hover-bg);
-        border-radius: var(--radius-md);
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: all var(--transition-fast);
-        text-decoration: none;
-      }
+        .add-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+          border-radius: 4px;
+          color: #64748b;
+          transition: all 0.2s ease;
 
-      .add-btn:hover {
-        background: var(--primary-100);
-        color: var(--primary-600);
-      }
+          &:hover {
+            background: #f1f5f9;
+            color: #6366f1;
+          }
 
-      .add-btn mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+        }
       }
 
       .nav-item {
@@ -241,26 +251,6 @@ interface NavItem {
         align-items: center;
         gap: 0.75rem;
         padding: 0.625rem 0.75rem;
-        border-radius: var(--radius-lg);
-        color: var(--text-secondary);
-        text-decoration: none;
-        cursor: pointer;
-        transition: all var(--transition-fast);
-        margin-bottom: 0.25rem;
-      }
-
-      .nav-item:hover {
-        background: var(--hover-bg);
-        color: var(--text-primary);
-      }
-
-      .nav-item.active {
-        background: var(--primary-50);
-        color: var(--primary-700);
-      }
-
-      :host-context(.dark) .nav-item.active {
-        background: rgba(99, 102, 241, 0.15);
         color: var(--primary-400);
       }
 

@@ -65,12 +65,7 @@ class EloquentUserRepository implements UserRepositoryInterface
 
     public function attachDepartamento(int $userId, string $departamentoId, string $rol): void
     {
-        $model = $this->model->findOrFail($userId);
-        
-        $model->departamentos()->attach($departamentoId, [
-            'id' => Str::uuid()->toString(),
-            'rol' => $rol,
-        ]);
+        $this->syncSingleDepartamento($userId, $departamentoId, $rol);
     }
 
     public function detachDepartamento(int $userId, string $departamentoId): void
@@ -78,6 +73,23 @@ class EloquentUserRepository implements UserRepositoryInterface
         $model = $this->model->findOrFail($userId);
         
         $model->departamentos()->detach($departamentoId);
+    }
+
+    public function syncSingleDepartamento(int $userId, string $departamentoId, string $rol = 'EDITOR'): void
+    {
+        $model = $this->model->findOrFail($userId);
+
+        $model->departamentos()->detach();
+        $model->departamentos()->attach($departamentoId, [
+            'id' => Str::uuid()->toString(),
+            'rol' => $rol,
+        ]);
+    }
+
+    public function clearDepartamentos(int $userId): void
+    {
+        $model = $this->model->findOrFail($userId);
+        $model->departamentos()->detach();
     }
 
     private function toDomain(UserModel $model): User
@@ -90,6 +102,7 @@ class EloquentUserRepository implements UserRepositoryInterface
             emailVerifiedAt: $model->email_verified_at ? new \DateTimeImmutable($model->email_verified_at->toDateTimeString()) : null,
             createdAt: $model->created_at ? new \DateTimeImmutable($model->created_at->toDateTimeString()) : null,
             updatedAt: $model->updated_at ? new \DateTimeImmutable($model->updated_at->toDateTimeString()) : null,
+            rol: $model->rol,
         );
     }
 

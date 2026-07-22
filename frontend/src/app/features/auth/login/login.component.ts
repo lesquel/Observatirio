@@ -31,7 +31,7 @@ import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
   styleUrl: './login.component.scss',
 })
 export class LoginComponent {
-  private readonly destroyRef = inject(DestroyRef);
+    private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
@@ -55,7 +55,7 @@ export class LoginComponent {
     this.authService.login(this.form.value).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         // Redirigir según el rol del usuario
-        if (this.authService.isAdmin() || this.authService.isEditor()) {
+        if (this.authService.isAdmin()) {
           this.router.navigate(['/admin/dashboard']);
         } else {
           this.router.navigate(['/publico/departamentos']);

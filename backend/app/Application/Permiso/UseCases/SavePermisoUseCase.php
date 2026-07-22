@@ -7,11 +7,14 @@ namespace App\Application\Permiso\UseCases;
 use App\Application\Permiso\DTOs\PermisoResponseDTO;
 use App\Domain\Permiso\Entities\Permiso;
 use App\Domain\Permiso\Repositories\PermisoRepositoryInterface;
+use App\Domain\User\Repositories\UserRepositoryInterface;
+use Illuminate\Validation\ValidationException;
 
 class SavePermisoUseCase
 {
     public function __construct(
         private readonly PermisoRepositoryInterface $permisoRepository,
+        private readonly UserRepositoryInterface $userRepository,
     ) {}
 
     /**
@@ -20,7 +23,6 @@ class SavePermisoUseCase
      */
     public function execute(int $userId, string $modulo, string $nivel, ?string $departamentoId = null): ?PermisoResponseDTO
     {
-        // Si es "ninguno", eliminar el permiso existente
         if ($nivel === Permiso::NIVEL_NINGUNO) {
             $existing = $this->permisoRepository->findOne($userId, $modulo, $departamentoId);
             if ($existing) {
@@ -47,19 +49,31 @@ class SavePermisoUseCase
      */
     public function saveAll(int $userId, array $permisosData): array
     {
-        // Obtener permisos actuales para detectar los que ya no existen
         $existing = $this->permisoRepository->findByUserId($userId);
 
-        // Construir key para identificar permisos existentes
         $incomingKeys = [];
         $results = [];
+        $observatorioDepartamentoId = null;
+        $observatorioNivel = Permiso::NIVEL_NINGUNO;
+        $sawObservatorios = false;
 
         foreach ($permisosData as $data) {
             $modulo = $data['modulo'];
             $nivel = $data['nivel'];
             $departamentoId = $data['departamento_id'] ?? null;
 
-            $key = $modulo . '|' . ($departamentoId ?? '');
+            if ($modulo === Permiso::MODULO_OBSERVATORIOS) {
+                $sawObservatorios = true;
+                if ($nivel !== Permiso::NIVEL_NINGUNO && empty($departamentoId)) {
+                    throw ValidationException::withMessages([
+                        'permisos' => ['Debe asignar exactamente un observatorio al usuario.'],
+                    ]);
+                }
+                $observatorioDepartamentoId = $departamentoId;
+                $observatorioNivel = $nivel;
+            }
+
+            $key = $modulo.'|'.($departamentoId ?? '');
             $incomingKeys[] = $key;
 
             $result = $this->execute($userId, $modulo, $nivel, $departamentoId);
@@ -68,11 +82,23 @@ class SavePermisoUseCase
             }
         }
 
-        // Eliminar permisos que ya no están en la nueva configuración
         foreach ($existing as $permiso) {
-            $key = $permiso->modulo . '|' . ($permiso->departamentoId ?? '');
-            if (!in_array($key, $incomingKeys)) {
+            $key = $permiso->modulo.'|'.($permiso->departamentoId ?? '');
+            if (! in_array($key, $incomingKeys, true)) {
                 $this->permisoRepository->delete($permiso->id);
+            }
+        }
+
+        if ($sawObservatorios) {
+            if ($observatorioNivel !== Permiso::NIVEL_NINGUNO && $observatorioDepartamentoId) {
+                $pivotRol = match ($observatorioNivel) {
+                    Permiso::NIVEL_ADMIN => 'ADMIN',
+                    Permiso::NIVEL_ESCRITURA => 'EDITOR',
+                    default => 'LECTOR',
+                };
+                $this->userRepository->syncSingleDepartamento($userId, $observatorioDepartamentoId, $pivotRol);
+            } else {
+                $this->userRepository->clearDepartamentos($userId);
             }
         }
 

@@ -7,10 +7,10 @@ export interface Departamento {
   descripcion?: string;
   icono?: string;
   publico: boolean;
+  powerbi_url?: string | null;
+  powerbi_label?: string | null;
   created_at: string;
   updated_at: string;
   datasets?: Dataset[];
   datasets_count?: number;
-  powerbi_url?: string | null;
-  powerbi_label?: string | null;
 }

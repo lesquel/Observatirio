@@ -30,7 +30,10 @@ class EloquentPermisoRepository implements PermisoRepositoryInterface
             ->where('modulo', $modulo);
 
         if ($departamentoId !== null) {
-            $query->where('departamento_id', $departamentoId);
+            $query->where(function ($q) use ($departamentoId) {
+                $q->where('departamento_id', $departamentoId)
+                  ->orWhereNull('departamento_id');
+            })->orderByRaw('departamento_id IS NULL ASC');
         } else {
             $query->whereNull('departamento_id');
         }

@@ -9,6 +9,7 @@ use App\Application\Departamento\DTOs\DepartamentoResponseDTO;
 use App\Domain\Departamento\Entities\Departamento;
 use App\Domain\Departamento\Repositories\DepartamentoRepositoryInterface;
 use App\Domain\User\Repositories\UserRepositoryInterface;
+use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
 class CreateDepartamentoUseCase
@@ -20,7 +21,6 @@ class CreateDepartamentoUseCase
 
     public function execute(CreateDepartamentoDTO $dto): DepartamentoResponseDTO
     {
-        // Verificar que el código interno no exista
         $existing = $this->departamentoRepository->findByCodigoInterno($dto->codigoInterno);
         if ($existing) {
             throw ValidationException::withMessages([
@@ -28,7 +28,6 @@ class CreateDepartamentoUseCase
             ]);
         }
 
-        // Crear entidad de dominio
         $departamento = Departamento::create(
             nombre: $dto->nombre,
             codigoInterno: $dto->codigoInterno,
@@ -36,15 +35,17 @@ class CreateDepartamentoUseCase
             publico: $dto->publico,
         );
 
-        // Guardar en repositorio
         $savedDepartamento = $this->departamentoRepository->save($departamento);
 
-        // Asignar usuario como ADMIN del departamento
-        $this->userRepository->attachDepartamento(
-            userId: $dto->userId,
-            departamentoId: $savedDepartamento->id,
-            rol: 'ADMIN'
-        );
+        // ADMIN global ya tiene acceso total; no ocupar el cupo de un solo observatorio.
+        $creator = User::find($dto->userId);
+        if ($creator && $creator->rol !== 'ADMIN') {
+            $this->userRepository->syncSingleDepartamento(
+                userId: $dto->userId,
+                departamentoId: $savedDepartamento->id,
+                rol: 'ADMIN'
+            );
+        }
 
         return DepartamentoResponseDTO::fromEntity($savedDepartamento, 'ADMIN');
     }

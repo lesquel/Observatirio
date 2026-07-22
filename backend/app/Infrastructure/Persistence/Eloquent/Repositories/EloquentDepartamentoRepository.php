@@ -112,13 +112,21 @@ class EloquentDepartamentoRepository implements DepartamentoRepositoryInterface
             return $this->model->where('id', $departamentoId)->exists();
         }
 
-        // Para otros usuarios, verificar asignación específica o permisos
+        // Para otros usuarios: permisos primero, pivot como fallback
+        // PERMISO: verificar si el usuario tiene un permiso activo (nivel != ninguno)
+        $hasPermiso = \App\Infrastructure\Persistence\Eloquent\Models\PermisoModel::where('user_id', $userId)
+            ->where('departamento_id', $departamentoId)
+            ->where('nivel', '!=', 'ninguno')
+            ->exists();
+
+        if ($hasPermiso) {
+            return true;
+        }
+
+        // PIVOT: fallback a la asignación específica en la tabla pivote
         return $this->model
             ->where('id', $departamentoId)
-            ->where(function ($query) use ($userId) {
-                $query->whereHas('usuarios', fn($q) => $q->where('user_id', $userId))
-                      ->orWhereHas('permisos', fn($q) => $q->where('user_id', $userId)->where('nivel', '!=', 'ninguno'));
-            })
+            ->whereHas('usuarios', fn($q) => $q->where('user_id', $userId))
             ->exists();
     }
 

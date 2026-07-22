@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { PermisoConfig, SavePermisosResponse } from '../models/permisos';
+import { PermisoConfig, SavePermisosResponse, UserPermissionsResponse } from '../models/permisos';
 
 @Injectable({
   providedIn: 'root',
@@ -22,5 +22,10 @@ export class PermisosApiService {
   /** Obtiene los permisos del usuario autenticado */
   getMyPermisos(): Observable<PermisoConfig[]> {
     return this.api.get<PermisoConfig[]>('/permisos/mis-permisos');
+  }
+
+  /** Obtiene el DTO unificado de permisos del usuario autenticado */
+  getUserPermissions(): Observable<UserPermissionsResponse> {
+    return this.api.get<UserPermissionsResponse>('/permisos/user/permissions');
   }
 }

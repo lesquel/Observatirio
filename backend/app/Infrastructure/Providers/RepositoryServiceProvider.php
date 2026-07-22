@@ -23,6 +23,7 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentRegistroDatoRep
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentVariableMetadatoRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
 use App\Infrastructure\Persistence\Mongo\Repositories\MongoRegistroDatoRepository;
+use App\Application\Auth\Services\AuthorizationService;
 use App\Infrastructure\Services\StatisticsService;
 use App\Infrastructure\Services\TextProcessingService;
 
@@ -43,6 +44,8 @@ class RepositoryServiceProvider extends ServiceProvider
         PermisoRepositoryInterface::class => EloquentPermisoRepository::class,
         // Services
         StatisticsServiceInterface::class => StatisticsService::class,
+        // Authorization
+        AuthorizationService::class => AuthorizationService::class,
     ];
 
     /**

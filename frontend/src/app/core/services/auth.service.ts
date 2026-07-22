@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Observable, catchError, finalize, map, of, tap } from 'rxjs';
 import { AuthResponse, LoginRequest, RegisterRequest, User, UserRole } from '../models';
 import { ApiService } from './api.service';
+import { PermisosService } from './permisos.service';
 
 /**
  * Clave para almacenar el perfil del usuario en sessionStorage.
@@ -18,6 +19,7 @@ const USER_KEY = 'auth_user';
 export class AuthService {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly permisosService = inject(PermisosService);
 
   // State con signals
   private readonly userSignal = signal<User | null>(this.getStoredUser());
@@ -37,12 +39,7 @@ export class AuthService {
   // Computed values para roles
   readonly isAdmin = computed(() => this.userSignal()?.rol === 'ADMIN');
   readonly isUser = computed(() => this.userSignal()?.rol === 'USER');
-  readonly isEditor = computed(() => {
-    const user = this.userSignal();
-    if (!user) return false;
-    if (user.rol === 'EDITOR') return true;
-    return !!user.departamentos?.some((d) => d.rol === 'EDITOR' || d.rol === 'ADMIN');
-  });
+  readonly isEditor = computed(() => this.userSignal()?.rol === 'EDITOR');
   readonly isSubscriber = computed(() => this.userSignal()?.rol === 'SUBSCRIBER');
   readonly userRole = computed(() => this.userSignal()?.rol ?? null);
 
@@ -77,6 +74,7 @@ export class AuthService {
       tap((user) => {
         this.userSignal.set(user);
         this.storeUser(user);
+        this.permisosService.syncFromBackend(user.id).subscribe();
       })
     );
   }
@@ -106,11 +104,8 @@ export class AuthService {
    * Verificar si el usuario tiene alguno de los roles especificados
    */
   hasAnyRole(roles: UserRole[]): boolean {
-    const user = this.userSignal();
-    if (!user) return false;
-    if (roles.includes(user.rol)) return true;
-    if (roles.includes('EDITOR') && this.isEditor()) return true;
-    return false;
+    const userRole = this.userSignal()?.rol;
+    return userRole ? roles.includes(userRole) : false;
   }
 
   /**
@@ -146,6 +141,7 @@ export class AuthService {
   clearAuthSilent(): void {
     this.tokenSignal.set(null);
     this.userSignal.set(null);
+    this.permisosService.clearCache();
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem(USER_KEY);
     }
@@ -157,6 +153,7 @@ export class AuthService {
     this.userSignal.set(response.user);
     // El perfil del usuario se guarda en sessionStorage (mismo tab, se elimina al cerrar).
     this.storeUser(response.user);
+    this.permisosService.syncFromBackend(response.user.id).subscribe();
   }
 
   private clearAuth(): void {

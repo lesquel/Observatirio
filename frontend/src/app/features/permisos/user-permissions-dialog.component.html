@@ -20,16 +20,16 @@
       @for (mod of modules; track mod.modulo) {
         <div class="modulo-card" [class.habilitado]="mod.habilitado">
           <!-- Cabecera del módulo -->
-          <div class="modulo-header">
+          <div class="modulo-header" (click)="onToggleModulo(mod, !mod.habilitado)">
             <mat-checkbox
               [checked]="mod.habilitado"
               (change)="onToggleModulo(mod, $event.checked)"
-            >
-              <div class="modulo-icon-box" style="display:inline-flex;margin-right:8px;">
-                <mat-icon>{{ mod.icon }}</mat-icon>
-              </div>
-              <span class="modulo-title">{{ mod.label }}</span>
-            </mat-checkbox>
+              (click)="$event.stopPropagation()"
+            ></mat-checkbox>
+            <div class="modulo-icon-box">
+              <mat-icon>{{ mod.icon }}</mat-icon>
+            </div>
+            <span class="modulo-title">{{ mod.label }}</span>
           </div>
 
           <!-- Configuración (visible solo si está habilitado) -->
@@ -52,20 +52,17 @@
               @if (mod.modulo === 'observatorios') {
                 <div class="config-row">
                   <mat-form-field appearance="outline" class="obs-select">
-                    <mat-label>Dimensión / Departamento</mat-label>
-                    <mat-select [(ngModel)]="mod.departamentoId">
-                      <mat-option [value]="null">Todos los departamentos</mat-option>
+                    <mat-label>Observatorio asignado</mat-label>
+                    <mat-select [(ngModel)]="mod.departamentoId" required>
                       @for (dep of departamentos; track dep.id) {
                         <mat-option [value]="dep.id">{{ dep.nombre }}</mat-option>
                       }
                     </mat-select>
                   </mat-form-field>
                 </div>
-                @if (mod.departamentoId === null) {
-                  <p class="obs-hint">
-                    El usuario tendrá acceso a <strong>todos</strong> los departamentos registrados.
-                  </p>
-                }
+                <p class="obs-hint">
+                  Solo se puede asignar <strong>un</strong> observatorio por usuario.
+                </p>
               }
             </div>
           }
@@ -76,7 +73,7 @@
 
   <mat-dialog-actions align="end" class="dialog-actions">
     <button mat-button (click)="cancel()">Cancelar</button>
-    <button mat-flat-button color="primary" (click)="save()">
+    <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">
       <mat-icon>save</mat-icon>
       Guardar Permisos
     </button>

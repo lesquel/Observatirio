@@ -7,6 +7,7 @@ namespace App\Domain\Permiso\Entities;
 class Permiso
 {
     public const MODULO_ATLAS = 'atlas';
+    public const MODULO_ARTICULOS = 'articulos';
     public const MODULO_REPORTES = 'reportes';
     public const MODULO_OBSERVATORIOS = 'observatorios';
 
@@ -17,9 +18,18 @@ class Permiso
 
     public const MODULOS = [
         self::MODULO_ATLAS,
+        self::MODULO_ARTICULOS,
         self::MODULO_REPORTES,
         self::MODULO_OBSERVATORIOS,
     ];
+
+    /** Mapeo tipo de publicación de observatorio → módulo de permiso */
+    public const TIPO_PUBLICACION_MODULO = [
+        'ATLAS' => self::MODULO_ATLAS,
+        'ARTICULO' => self::MODULO_ARTICULOS,
+        'REPORTE' => self::MODULO_REPORTES,
+    ];
+
 
     public const NIVELES = [
         self::NIVEL_NINGUNO,

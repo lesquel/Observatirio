@@ -6,8 +6,10 @@ namespace App\Presentation\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Infrastructure\Persistence\Eloquent\Models\ReporteModel;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
@@ -29,6 +31,9 @@ class ReporteController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = ReporteModel::with(['categoria', 'departamento']);
+
+        // Apply visibility scope based on user authentication
+        $query->visibleFor($request->user('sanctum'));
 
         if ($request->filled('categoria_id')) {
             $query->where('categoria_id', $request->query('categoria_id'));
@@ -66,11 +71,15 @@ class ReporteController extends Controller
             return response()->json(['message' => 'Reporte no encontrado'], 404);
         }
 
-        if ($reporte->visibilidad === 'suscriptor') {
-            $user = $request->user('sanctum');
-            if (!$user || !in_array($user->rol, ['ADMIN', 'EDITOR', 'SUBSCRIBER'])) {
+        try {
+            Gate::authorize('view', $reporte);
+        } catch (AuthorizationException) {
+            // Distinguish: privado → 404, suscriptor → 403 with paywall message
+            if ($reporte->visibilidad === 'suscriptor') {
                 return response()->json(['message' => 'Acceso exclusivo para suscriptores.'], 403);
             }
+
+            return response()->json(['message' => 'Reporte no encontrado'], 404);
         }
 
         return response()->json($reporte);
@@ -139,6 +148,8 @@ class ReporteController extends Controller
         }
 
         unset($data['ficha']);
+
+        Gate::authorize('create', [ReporteModel::class, $data['departamento_id'] ?? null]);
 
         $reporte = ReporteModel::create($data);
         $reporte->load(['categoria', 'departamento']);
@@ -228,6 +239,8 @@ class ReporteController extends Controller
 
         unset($data['ficha']);
 
+        Gate::authorize('update', $reporte);
+
         $reporte->update($data);
 
         return response()->json($reporte->fresh(['categoria', 'departamento']));
@@ -253,6 +266,8 @@ class ReporteController extends Controller
         if (!$reporte) {
             return response()->json(['message' => 'Reporte no encontrado'], 404);
         }
+
+        Gate::authorize('delete', $reporte);
 
         $reporte->delete();
 
