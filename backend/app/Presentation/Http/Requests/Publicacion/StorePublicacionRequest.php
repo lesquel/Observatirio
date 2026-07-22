@@ -17,13 +17,19 @@ class StorePublicacionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipo' => ['required', Rule::in(['ARTICULO', 'REPORTE'])],
+            'tipo' => ['required', Rule::in(['ARTICULO', 'REPORTE', 'ATLAS'])],
             'titulo' => ['required', 'string', 'max:255'],
             'fecha_publicacion' => ['required', 'date'],
             'link_url' => ['required', 'url:http,https', 'max:2048'],
             'descripcion' => ['required', 'string', 'max:3000'],
-            'autores' => [Rule::requiredIf($this->input('tipo') === 'ARTICULO'), 'nullable', 'string', 'max:1000'],
+            'autores' => [
+                Rule::requiredIf(in_array($this->input('tipo'), ['ARTICULO', 'ATLAS'], true)),
+                'nullable',
+                'string',
+                'max:1000',
+            ],
             'fuente' => ['required', 'string', 'max:255'],
+            'visibilidad' => ['nullable', 'string', Rule::in(['publico', 'suscriptor', 'privado'])],
             'archivo' => ['required', 'file', 'mimetypes:application/pdf,application/x-pdf', 'mimes:pdf', 'max:20480'],
         ];
     }
@@ -31,14 +37,14 @@ class StorePublicacionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'tipo.in' => 'Atlas todavía no está disponible para guardarse.',
+            'tipo.in' => 'El tipo debe ser Artículo, Reporte o Atlas.',
             'titulo.required' => 'El título o nombre es obligatorio.',
             'fecha_publicacion.required' => 'La fecha de publicación es obligatoria.',
             'fecha_publicacion.date' => 'La fecha de publicación no es válida.',
             'link_url.required' => 'El enlace URL es obligatorio.',
             'link_url.url' => 'El enlace debe ser una URL válida con http o https.',
             'descripcion.required' => 'La descripción es obligatoria.',
-            'autores.required' => 'El autor o autores son obligatorios para un artículo.',
+            'autores.required' => 'El autor o autores son obligatorios.',
             'fuente.required' => 'La fuente es obligatoria.',
             'archivo.required' => 'Debe subir el documento PDF.',
             'archivo.mimetypes' => 'El documento debe ser un archivo PDF válido.',

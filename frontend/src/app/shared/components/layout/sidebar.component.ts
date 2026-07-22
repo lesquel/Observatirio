@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, output, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, output, signal, DestroyRef } from '@angular/core';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -7,8 +7,10 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Departamento } from '@core/models';
 import { AuthService } from '@core/services/auth.service';
 import { DepartamentoService } from '@core/services/departamento.service';
+import { PermisosService } from '@core/services/permisos.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { IsAdminDirective } from '../../directives/is-admin.directive';
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 
 interface NavItem {
   label: string;
@@ -50,19 +52,33 @@ interface NavItem {
           <span class="nav-text">{{ 'layout.sidebar.dashboard' | translate }}</span>
         </a>
 
-        <!-- Subir Dataset - solo admin -->
+        <!-- Atlas -->
         <a
-          *isAdmin
           class="nav-item"
-          routerLink="/admin/datasets/nuevo"
+          routerLink="/admin/atlas"
           routerLinkActive="active"
           (click)="navigate.emit()"
         >
           <div class="nav-icon-wrapper">
-            <mat-icon class="nav-icon">cloud_upload</mat-icon>
+            <mat-icon class="nav-icon">map</mat-icon>
           </div>
-          <span class="nav-text">{{ 'layout.sidebar.uploadDataset' | translate }}</span>
+          <span class="nav-text">Atlas</span>
         </a>
+
+        <!-- Subir Dataset - admin y editor -->
+        @if (isAdmin() || isEditor()) {
+          <a
+            class="nav-item"
+            routerLink="/admin/datasets/nuevo"
+            routerLinkActive="active"
+            (click)="navigate.emit()"
+          >
+            <div class="nav-icon-wrapper">
+              <mat-icon class="nav-icon">cloud_upload</mat-icon>
+            </div>
+            <span class="nav-text">{{ 'layout.sidebar.uploadDataset' | translate }}</span>
+          </a>
+        }
 
         <!-- Gestión de Usuarios - solo admin -->
         <a
@@ -73,9 +89,23 @@ interface NavItem {
           (click)="navigate.emit()"
         >
           <div class="nav-icon-wrapper">
-            <mat-icon class="nav-icon">people</mat-icon>
+            <mat-icon class="nav-icon">manage_accounts</mat-icon>
           </div>
           <span class="nav-text">{{ 'layout.sidebar.users' | translate }}</span>
+        </a>
+
+        <!-- Gestión de Permisos - solo admin -->
+        <a
+          *isAdmin
+          class="nav-item"
+          routerLink="/admin/permisos"
+          routerLinkActive="active"
+          (click)="navigate.emit()"
+        >
+          <div class="nav-icon-wrapper">
+            <mat-icon class="nav-icon">security</mat-icon>
+          </div>
+          <span class="nav-text">{{ 'layout.sidebar.permissions' | translate }}</span>
         </a>
       </div>
 
@@ -182,7 +212,7 @@ interface NavItem {
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--text-tertiary);
+        color: #94a3b8;
         padding: 0 0.75rem;
         margin-bottom: 0.5rem;
       }
@@ -192,32 +222,28 @@ interface NavItem {
         align-items: center;
         justify-content: space-between;
         padding-right: 0.5rem;
-        margin-bottom: 0.5rem;
-      }
 
-      .add-btn {
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--hover-bg);
-        border-radius: var(--radius-md);
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: all var(--transition-fast);
-        text-decoration: none;
-      }
+        .add-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+          border-radius: 4px;
+          color: #64748b;
+          transition: all 0.2s ease;
 
-      .add-btn:hover {
-        background: var(--primary-100);
-        color: var(--primary-600);
-      }
+          &:hover {
+            background: #f1f5f9;
+            color: #6366f1;
+          }
 
-      .add-btn mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+        }
       }
 
       .nav-item {
@@ -225,26 +251,6 @@ interface NavItem {
         align-items: center;
         gap: 0.75rem;
         padding: 0.625rem 0.75rem;
-        border-radius: var(--radius-lg);
-        color: var(--text-secondary);
-        text-decoration: none;
-        cursor: pointer;
-        transition: all var(--transition-fast);
-        margin-bottom: 0.25rem;
-      }
-
-      .nav-item:hover {
-        background: var(--hover-bg);
-        color: var(--text-primary);
-      }
-
-      .nav-item.active {
-        background: var(--primary-50);
-        color: var(--primary-700);
-      }
-
-      :host-context(.dark) .nav-item.active {
-        background: rgba(99, 102, 241, 0.15);
         color: var(--primary-400);
       }
 
@@ -398,6 +404,7 @@ interface NavItem {
   ],
 })
 export class SidebarComponent implements OnInit {
+    private readonly destroyRef = inject(DestroyRef);
   private readonly deptoService = inject(DepartamentoService);
   private readonly authService = inject(AuthService);
 
@@ -406,6 +413,7 @@ export class SidebarComponent implements OnInit {
 
   // Computed para verificar si el usuario es admin
   isAdmin = computed(() => this.authService.isAdmin());
+  isEditor = computed(() => this.authService.isEditor());
 
   // Colores para los departamentos
   private deptoColors = [
@@ -425,13 +433,13 @@ export class SidebarComponent implements OnInit {
     this.loadDepartamentos();
 
     // Suscribirse a cambios en departamentos para actualizar automáticamente
-    this.deptoService.onDepartamentosChanged$.subscribe(() => {
+    this.deptoService.onDepartamentosChanged$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.loadDepartamentos();
     });
   }
 
   loadDepartamentos(): void {
-    this.deptoService.getAll().subscribe({
+    this.deptoService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (departamentos) => this.departamentos.set(departamentos || []),
       error: () => this.departamentos.set([]),
     });

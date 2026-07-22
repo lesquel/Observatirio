@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Application\Dataset\UseCases;
 
+use App\Application\Auth\Services\AuthorizationService;
 use App\Domain\Departamento\Repositories\DepartamentoRepositoryInterface;
 use App\Domain\Dataset\Repositories\DatasetRepositoryInterface;
+use App\Domain\User\Entities\User as DomainUser;
+use App\Models\User;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -15,6 +18,7 @@ class UpdateDatasetStopwordsUseCase
     public function __construct(
         private readonly DatasetRepositoryInterface $datasetRepository,
         private readonly DepartamentoRepositoryInterface $departamentoRepository,
+        private readonly AuthorizationService $authorizationService,
     ) {}
 
     public function execute(string $datasetId, int $userId, array $stopwords): array
@@ -25,9 +29,19 @@ class UpdateDatasetStopwordsUseCase
             throw new HttpException(Response::HTTP_NOT_FOUND, 'Dataset no encontrado');
         }
 
-        // Verify access
-        $role = $this->departamentoRepository->getUserRole($dataset->departamentoId, $userId);
-        if (!in_array($role, ['ADMIN', 'EDITOR'])) {
+        $eloquentUser = User::find($userId);
+        if (!$eloquentUser) {
+            throw new HttpException(Response::HTTP_UNAUTHORIZED, 'Usuario no encontrado');
+        }
+
+        $domainUser = new DomainUser(
+            id: $eloquentUser->id,
+            name: $eloquentUser->name ?? '',
+            email: $eloquentUser->email ?? '',
+            rol: $eloquentUser->rol,
+        );
+
+        if (!$this->authorizationService->canWriteDataset($domainUser, $dataset->departamentoId)) {
             throw new HttpException(Response::HTTP_FORBIDDEN, 'No tienes permisos para modificar este dataset');
         }
 

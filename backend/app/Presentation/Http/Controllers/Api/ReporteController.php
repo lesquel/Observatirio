@@ -6,8 +6,10 @@ namespace App\Presentation\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Infrastructure\Persistence\Eloquent\Models\ReporteModel;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
@@ -28,10 +30,17 @@ class ReporteController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = ReporteModel::with('categoria');
+        $query = ReporteModel::with(['categoria', 'departamento']);
+
+        // Apply visibility scope based on user authentication
+        $query->visibleFor($request->user('sanctum'));
 
         if ($request->filled('categoria_id')) {
             $query->where('categoria_id', $request->query('categoria_id'));
+        }
+
+        if ($request->filled('departamento_id')) {
+            $query->where('departamento_id', $request->query('departamento_id'));
         }
 
         $reportes = $query
@@ -54,11 +63,22 @@ class ReporteController extends Controller
             new OA\Response(response: 404, description: 'No encontrado')
         ]
     )]
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
-        $reporte = ReporteModel::with('categoria')->find($id);
+        $reporte = ReporteModel::with(['categoria', 'departamento'])->find($id);
 
         if (!$reporte) {
+            return response()->json(['message' => 'Reporte no encontrado'], 404);
+        }
+
+        try {
+            Gate::authorize('view', $reporte);
+        } catch (AuthorizationException) {
+            // Distinguish: privado → 404, suscriptor → 403 with paywall message
+            if ($reporte->visibilidad === 'suscriptor') {
+                return response()->json(['message' => 'Acceso exclusivo para suscriptores.'], 403);
+            }
+
             return response()->json(['message' => 'Reporte no encontrado'], 404);
         }
 
@@ -83,6 +103,7 @@ class ReporteController extends Controller
                         new OA\Property(property: 'link_url', type: 'string', format: 'url'),
                         new OA\Property(property: 'fuente', type: 'string'),
                         new OA\Property(property: 'categoria_id', type: 'string', format: 'uuid'),
+                        new OA\Property(property: 'departamento_id', type: 'string', format: 'uuid'),
                         new OA\Property(property: 'ficha', type: 'string', format: 'binary')
                     ]
                 )
@@ -107,7 +128,9 @@ class ReporteController extends Controller
             'fecha_publicacion' => 'nullable|date',
             'link_url' => 'nullable|url|max:500',
             'fuente' => 'nullable|string|max:255',
+            'visibilidad' => 'sometimes|string|in:publico,suscriptor,privado',
             'categoria_id' => 'nullable|uuid|exists:categorias_dataset,id',
+            'departamento_id' => 'nullable|uuid|exists:departamentos,id',
             'ficha' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240',
         ]);
 
@@ -126,8 +149,10 @@ class ReporteController extends Controller
 
         unset($data['ficha']);
 
+        Gate::authorize('create', [ReporteModel::class, $data['departamento_id'] ?? null]);
+
         $reporte = ReporteModel::create($data);
-        $reporte->load('categoria');
+        $reporte->load(['categoria', 'departamento']);
 
         return response()->json($reporte, 201);
     }
@@ -152,6 +177,7 @@ class ReporteController extends Controller
                         new OA\Property(property: 'link_url', type: 'string', format: 'url'),
                         new OA\Property(property: 'fuente', type: 'string'),
                         new OA\Property(property: 'categoria_id', type: 'string', format: 'uuid'),
+                        new OA\Property(property: 'departamento_id', type: 'string', format: 'uuid'),
                         new OA\Property(property: 'ficha', type: 'string', format: 'binary')
                     ]
                 )
@@ -183,7 +209,9 @@ class ReporteController extends Controller
             'fecha_publicacion' => 'nullable|date',
             'link_url' => 'nullable|url|max:500',
             'fuente' => 'nullable|string|max:255',
+            'visibilidad' => 'sometimes|string|in:publico,suscriptor,privado',
             'categoria_id' => 'nullable|uuid|exists:categorias_dataset,id',
+            'departamento_id' => 'nullable|uuid|exists:departamentos,id',
             'ficha' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240',
         ]);
 
@@ -211,9 +239,11 @@ class ReporteController extends Controller
 
         unset($data['ficha']);
 
+        Gate::authorize('update', $reporte);
+
         $reporte->update($data);
 
-        return response()->json($reporte->fresh(['categoria']));
+        return response()->json($reporte->fresh(['categoria', 'departamento']));
     }
 
     #[OA\Delete(
@@ -236,6 +266,8 @@ class ReporteController extends Controller
         if (!$reporte) {
             return response()->json(['message' => 'Reporte no encontrado'], 404);
         }
+
+        Gate::authorize('delete', $reporte);
 
         $reporte->delete();
 
@@ -268,6 +300,17 @@ class ReporteController extends Controller
             return response()->json(['message' => 'Ficha no encontrada'], 404)
                 ->header('Access-Control-Allow-Origin', '*')
                 ->header('Cross-Origin-Resource-Policy', 'cross-origin');
+        }
+
+        // Validación de paywall para descargas/fichas de suscriptor
+        $reporte = ReporteModel::where('ficha_indicador', 'like', '%' . $filename)->first();
+        if ($reporte && $reporte->visibilidad === 'suscriptor') {
+            $user = request()->user('sanctum');
+            if (!$user || !in_array($user->rol, ['ADMIN', 'EDITOR', 'SUBSCRIBER'])) {
+                return response()->json(['message' => 'Acceso exclusivo para suscriptores.'], 403)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Cross-Origin-Resource-Policy', 'cross-origin');
+            }
         }
 
         $file = Storage::get($path);

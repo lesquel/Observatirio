@@ -6,8 +6,10 @@ namespace App\Presentation\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Infrastructure\Persistence\Eloquent\Models\DatasetFuenteModel;
+use App\Infrastructure\Persistence\Eloquent\Models\DatasetModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
@@ -27,6 +29,12 @@ class DatasetFuenteController extends Controller
     )]
     public function index(string $datasetId): JsonResponse
     {
+        $dataset = DatasetModel::with('departamento')->find($datasetId);
+
+        if (!$dataset || !$dataset->departamento || !$dataset->departamento->publico) {
+            return response()->json([]);
+        }
+
         $fuentes = DatasetFuenteModel::where('dataset_id', $datasetId)
             ->orderBy('orden')
             ->get();
@@ -61,6 +69,8 @@ class DatasetFuenteController extends Controller
     )]
     public function store(Request $request, string $datasetId): JsonResponse
     {
+        Gate::authorize('update', DatasetModel::findOrFail($datasetId));
+
         // Normalize URL: add https:// if no protocol specified
         $input = $request->all();
         if (!empty($input['url']) && !preg_match('#^https?://#i', $input['url'])) {
@@ -110,6 +120,8 @@ class DatasetFuenteController extends Controller
             return response()->json(['message' => 'Fuente no encontrada'], 404);
         }
 
+        Gate::authorize('update', DatasetModel::findOrFail($fuente->dataset_id));
+
         // Normalize URL: add https:// if no protocol specified
         $input = $request->all();
         if (!empty($input['url']) && !preg_match('#^https?://#i', $input['url'])) {
@@ -155,6 +167,8 @@ class DatasetFuenteController extends Controller
         if (!$fuente) {
             return response()->json(['message' => 'Fuente no encontrada'], 404);
         }
+
+        Gate::authorize('update', DatasetModel::findOrFail($fuente->dataset_id));
 
         $fuente->delete();
 

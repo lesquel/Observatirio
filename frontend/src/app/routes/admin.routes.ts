@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminGuard } from '../core/guards/role.guard';
+import { adminGuard, roleGuard } from '../core/guards/role.guard';
 
 export const ADMIN_ROUTES: Routes = [
   // Dashboard
@@ -43,6 +43,16 @@ export const ADMIN_ROUTES: Routes = [
     title: 'Detalle del Departamento - Observatorio',
   },
 
+  // Atlas
+  {
+    path: 'atlas',
+    loadComponent: () =>
+      import('../features/public/public-atlas/public-atlas.component').then(
+        (m) => m.PublicAtlasComponent,
+      ),
+    title: 'Atlas - Observatorio',
+  },
+
   // Datasets
   {
     path: 'datasets',
@@ -58,7 +68,7 @@ export const ADMIN_ROUTES: Routes = [
       import('../features/datasets/dataset-upload/dataset-upload.component').then(
         (m) => m.DatasetUploadComponent,
       ),
-    canActivate: [adminGuard],
+    canActivate: [roleGuard('ADMIN', 'EDITOR')],
     title: 'Subir Dataset - Observatorio',
   },
   {
@@ -75,6 +85,7 @@ export const ADMIN_ROUTES: Routes = [
       import('../features/datasets/admin-variable-analysis/admin-variable-analysis.component').then(
         (m) => m.AdminVariableAnalysisComponent,
       ),
+    canActivate: [roleGuard('ADMIN', 'EDITOR')],
     title: 'Análisis de Variable - Observatorio',
   },
 
@@ -105,5 +116,14 @@ export const ADMIN_ROUTES: Routes = [
       ),
     canActivate: [adminGuard],
     title: 'Editar Usuario - Observatorio',
+  },
+  {
+    path: 'permisos',
+    loadComponent: () =>
+      import('../features/permisos/admin-permissions.component').then(
+        (m) => m.AdminPermissionsComponent
+      ),
+    canActivate: [adminGuard],
+    title: 'Permisos de Roles - Observatorio',
   },
 ];

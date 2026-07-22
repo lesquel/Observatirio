@@ -1,0 +1,81 @@
+<div class="dialog-container">
+  <h2 mat-dialog-title class="dialog-title">
+    <mat-icon>security</mat-icon>
+    <span>Configurar Permisos</span>
+  </h2>
+
+  <mat-dialog-content class="dialog-content">
+    <!-- Info del usuario -->
+    <div class="user-info">
+      <div class="user-avatar">{{ (user.name || 'U').charAt(0).toUpperCase() }}</div>
+      <div class="user-details">
+        <h3>{{ user.name }}</h3>
+        <p class="email">{{ user.email }}</p>
+        <span class="role-badge" [ngClass]="'badge-' + user.rol.toLowerCase()">{{ user.rol }}</span>
+      </div>
+    </div>
+
+    <!-- Módulos -->
+    <div class="modulos-list">
+      @for (mod of modules; track mod.modulo) {
+        <div class="modulo-card" [class.habilitado]="mod.habilitado">
+          <!-- Cabecera del módulo -->
+          <div class="modulo-header" (click)="onToggleModulo(mod, !mod.habilitado)">
+            <mat-checkbox
+              [checked]="mod.habilitado"
+              (change)="onToggleModulo(mod, $event.checked)"
+              (click)="$event.stopPropagation()"
+            ></mat-checkbox>
+            <div class="modulo-icon-box">
+              <mat-icon>{{ mod.icon }}</mat-icon>
+            </div>
+            <span class="modulo-title">{{ mod.label }}</span>
+          </div>
+
+          <!-- Configuración (visible solo si está habilitado) -->
+          @if (mod.habilitado) {
+            <div class="modulo-config">
+              <div class="config-row">
+                <mat-form-field appearance="outline" class="nivel-select">
+                  <mat-label>Nivel de acceso</mat-label>
+                  <mat-select [(ngModel)]="mod.nivel">
+                    @for (nivel of mod.nivelesDisponibles; track nivel) {
+                      <mat-option [value]="nivel">
+                        {{ nivelLabels[nivel] }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <!-- Selector de departamento (solo para módulo observatorios) -->
+              @if (mod.modulo === 'observatorios') {
+                <div class="config-row">
+                  <mat-form-field appearance="outline" class="obs-select">
+                    <mat-label>Observatorio asignado</mat-label>
+                    <mat-select [(ngModel)]="mod.departamentoId" required>
+                      @for (dep of departamentos; track dep.id) {
+                        <mat-option [value]="dep.id">{{ dep.nombre }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <p class="obs-hint">
+                  Solo se puede asignar <strong>un</strong> observatorio por usuario.
+                </p>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="dialog-actions">
+    <button mat-button (click)="cancel()">Cancelar</button>
+    <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">
+      <mat-icon>save</mat-icon>
+      Guardar Permisos
+    </button>
+  </mat-dialog-actions>
+</div>

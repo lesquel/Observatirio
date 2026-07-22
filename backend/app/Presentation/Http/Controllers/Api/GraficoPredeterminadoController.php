@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Presentation\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Infrastructure\Persistence\Eloquent\Models\DatasetModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GraficoPredeterminadoModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
@@ -27,6 +29,12 @@ class GraficoPredeterminadoController extends Controller
     )]
     public function index(string $datasetId): JsonResponse
     {
+        $dataset = DatasetModel::with('departamento')->find($datasetId);
+
+        if (!$dataset || !$dataset->departamento || !$dataset->departamento->publico) {
+            return response()->json([]);
+        }
+
         $graficos = GraficoPredeterminadoModel::where('dataset_id', $datasetId)
             ->where('activo', true)
             ->with(['variableX:id,nombre_columna,nombre_original,tipo_dato', 'variableY:id,nombre_columna,nombre_original,tipo_dato'])
@@ -69,6 +77,8 @@ class GraficoPredeterminadoController extends Controller
     )]
     public function store(Request $request, string $datasetId): JsonResponse
     {
+        Gate::authorize('update', DatasetModel::findOrFail($datasetId));
+
         $validator = Validator::make($request->all(), [
             'titulo' => 'required|string|max:255',
             'descripcion' => 'nullable|string|max:1000',
@@ -120,6 +130,8 @@ class GraficoPredeterminadoController extends Controller
             return response()->json(['message' => 'Gráfico no encontrado'], 404);
         }
 
+        Gate::authorize('update', DatasetModel::findOrFail($grafico->dataset_id));
+
         $validator = Validator::make($request->all(), [
             'titulo' => 'sometimes|string|max:255',
             'descripcion' => 'nullable|string|max:1000',
@@ -166,6 +178,8 @@ class GraficoPredeterminadoController extends Controller
         if (!$grafico) {
             return response()->json(['message' => 'Gráfico no encontrado'], 404);
         }
+
+        Gate::authorize('update', DatasetModel::findOrFail($grafico->dataset_id));
 
         $grafico->delete();
 

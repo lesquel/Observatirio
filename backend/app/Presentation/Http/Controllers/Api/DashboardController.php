@@ -14,11 +14,13 @@ use App\Application\Dashboard\UseCases\GetUnivariableStatsUseCase;
 use App\Application\Dataset\UseCases\GetDatasetStopwordsUseCase;
 use App\Application\Dataset\UseCases\UpdateDatasetStopwordsUseCase;
 use App\Http\Controllers\Controller;
+use App\Infrastructure\Persistence\Eloquent\Models\DatasetModel;
 use App\Presentation\Http\Requests\Stats\BivariableRequest;
 use App\Presentation\Http\Requests\Stats\StatsRequest;
 use App\Presentation\Http\Resources\Dataset\ChartDataResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[OA\Tag(name: 'Dashboard', description: 'Estadísticas y dashboard')]
 class DashboardController extends Controller
@@ -174,6 +176,7 @@ class DashboardController extends Controller
     )]
     public function updateStopwords(string $datasetId, Request $request): JsonResponse
     {
+        Gate::authorize('update', DatasetModel::findOrFail($datasetId));
         $request->validate(['stopwords' => 'required|array', 'stopwords.*' => 'string|max:100']);
         $result = $this->updateStopwordsUseCase->execute(
             $datasetId,

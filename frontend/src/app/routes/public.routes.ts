@@ -50,6 +50,22 @@ export const PUBLIC_ROUTES: Routes = [
     title: 'Barómetro - Observatorio ULEAM',
   },
   {
+    path: 'atlas',
+    loadComponent: () =>
+      import('../features/public/public-atlas/public-atlas.component').then(
+        (m) => m.PublicAtlasComponent,
+      ),
+    title: 'Atlas - Observatorio ULEAM',
+  },
+  {
+    path: 'documentos/:id',
+    loadComponent: () =>
+      import('../features/public/public-pdf-viewer/public-pdf-viewer.component').then(
+        (m) => m.PublicPdfViewerComponent,
+      ),
+    title: 'Visualizador de Documento - Observatorio ULEAM',
+  },
+  {
     path: '',
     redirectTo: 'departamentos',
     pathMatch: 'full',

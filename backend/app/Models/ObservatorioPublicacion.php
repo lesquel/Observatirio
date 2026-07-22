@@ -11,7 +11,7 @@ class ObservatorioPublicacion extends Model
     use HasUuids;
 
     protected $table = 'observatorio_publicaciones';
-    protected $fillable = ['departamento_id', 'creado_por', 'tipo', 'codigo', 'titulo', 'fecha_publicacion', 'link_url', 'descripcion', 'autores', 'fuente', 'archivo_pdf', 'nombre_archivo_original'];
+    protected $fillable = ['departamento_id', 'creado_por', 'tipo', 'codigo', 'titulo', 'fecha_publicacion', 'link_url', 'descripcion', 'autores', 'fuente', 'archivo_pdf', 'nombre_archivo_original', 'visibilidad'];
     protected $casts = ['fecha_publicacion' => 'date:Y-m-d'];
 
     public function departamento(): BelongsTo

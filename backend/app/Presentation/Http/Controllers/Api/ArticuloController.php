@@ -6,8 +6,10 @@ namespace App\Presentation\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticuloModel;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
@@ -27,10 +29,17 @@ class ArticuloController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = ArticuloModel::with('categoria');
+        $query = ArticuloModel::with(['categoria', 'departamento']);
+
+        // Apply visibility scope based on user authentication
+        $query->visibleFor($request->user('sanctum'));
 
         if ($request->filled('categoria_id')) {
             $query->where('categoria_id', $request->query('categoria_id'));
+        }
+
+        if ($request->filled('departamento_id')) {
+            $query->where('departamento_id', $request->query('departamento_id'));
         }
 
         $articulos = $query
@@ -53,11 +62,22 @@ class ArticuloController extends Controller
             new OA\Response(response: 404, description: 'No encontrado')
         ]
     )]
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
-        $articulo = ArticuloModel::with('categoria')->find($id);
+        $articulo = ArticuloModel::with(['categoria', 'departamento'])->find($id);
 
         if (!$articulo) {
+            return response()->json(['message' => 'Artículo no encontrado'], 404);
+        }
+
+        try {
+            Gate::authorize('view', $articulo);
+        } catch (AuthorizationException) {
+            // Distinguish: privado → 404, suscriptor → 403 with paywall message
+            if ($articulo->visibilidad === 'suscriptor') {
+                return response()->json(['message' => 'Acceso exclusivo para suscriptores.'], 403);
+            }
+
             return response()->json(['message' => 'Artículo no encontrado'], 404);
         }
 
@@ -82,7 +102,8 @@ class ArticuloController extends Controller
                     new OA\Property(property: 'enlace', type: 'string'),
                     new OA\Property(property: 'fecha_publicacion', type: 'string', format: 'date'),
                     new OA\Property(property: 'fecha_recepcion', type: 'string', format: 'date'),
-                    new OA\Property(property: 'categoria_id', type: 'string', format: 'uuid')
+                    new OA\Property(property: 'categoria_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'departamento_id', type: 'string', format: 'uuid')
                 ]
             )
         ),
@@ -102,9 +123,11 @@ class ArticuloController extends Controller
             'fuente' => 'nullable|string|max:255',
             'estado' => 'nullable|string',
             'enlace' => 'nullable|string',
+            'visibilidad' => 'sometimes|string|in:publico,suscriptor,privado',
             'fecha_publicacion' => 'nullable|date',
             'fecha_recepcion' => 'nullable|date',
             'categoria_id' => 'nullable|uuid|exists:categorias_dataset,id',
+            'departamento_id' => 'nullable|uuid|exists:departamentos,id',
         ]);
 
         if ($validator->fails()) {
@@ -114,8 +137,10 @@ class ArticuloController extends Controller
             ], 422);
         }
 
+        Gate::authorize('create', [ArticuloModel::class, $validator->validated()['departamento_id'] ?? null]);
+
         $articulo = ArticuloModel::create($validator->validated());
-        $articulo->load('categoria');
+        $articulo->load(['categoria', 'departamento']);
 
         return response()->json($articulo, 201);
     }
@@ -140,7 +165,8 @@ class ArticuloController extends Controller
                     new OA\Property(property: 'enlace', type: 'string'),
                     new OA\Property(property: 'fecha_publicacion', type: 'string', format: 'date'),
                     new OA\Property(property: 'fecha_recepcion', type: 'string', format: 'date'),
-                    new OA\Property(property: 'categoria_id', type: 'string', format: 'uuid')
+                    new OA\Property(property: 'categoria_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'departamento_id', type: 'string', format: 'uuid')
                 ]
             )
         ),
@@ -167,9 +193,11 @@ class ArticuloController extends Controller
             'fuente' => 'nullable|string|max:255',
             'estado' => 'nullable|string',
             'enlace' => 'nullable|string',
+            'visibilidad' => 'sometimes|string|in:publico,suscriptor,privado',
             'fecha_publicacion' => 'nullable|date',
             'fecha_recepcion' => 'nullable|date',
             'categoria_id' => 'nullable|uuid|exists:categorias_dataset,id',
+            'departamento_id' => 'nullable|uuid|exists:departamentos,id',
         ]);
 
         if ($validator->fails()) {
@@ -179,9 +207,11 @@ class ArticuloController extends Controller
             ], 422);
         }
 
+        Gate::authorize('update', $articulo);
+
         $articulo->update($validator->validated());
 
-        return response()->json($articulo->fresh(['categoria']));
+        return response()->json($articulo->fresh(['categoria', 'departamento']));
     }
 
     #[OA\Delete(
@@ -204,6 +234,8 @@ class ArticuloController extends Controller
         if (!$articulo) {
             return response()->json(['message' => 'Artículo no encontrado'], 404);
         }
+
+        Gate::authorize('delete', $articulo);
 
         $articulo->delete();
 

@@ -133,39 +133,33 @@ class DemoDataSeeder extends Seeder
 
     private function assignUsersToDepartamentos(array $users, $departamentos): void
     {
+        // Un solo observatorio por usuario (constraint duro en usuario_departamento.user_id)
         $assignments = [
-            // María → Vitalidad Ecológica (ADMIN), Resiliencia (EDITOR)
-            0 => [['depto' => 'VITALIDAD_ECOLOGICA', 'rol' => 'ADMIN'], ['depto' => 'RESILIENCIA', 'rol' => 'EDITOR']],
-            // Carlos → Gobernanza (ADMIN), Vinculación datasets
-            1 => [['depto' => 'GOBERNANZA', 'rol' => 'ADMIN'], ['depto' => 'ECONOMIA_CUIDADO', 'rol' => 'EDITOR']],
-            // Ana → Economía del Cuidado (ADMIN)
-            2 => [['depto' => 'ECONOMIA_CUIDADO', 'rol' => 'ADMIN']],
-            // Roberto → Resiliencia (ADMIN), Vitalidad Ecológica (LECTOR)
-            3 => [['depto' => 'RESILIENCIA', 'rol' => 'ADMIN'], ['depto' => 'VITALIDAD_ECOLOGICA', 'rol' => 'LECTOR']],
-            // Patricia → Saberes y Cultura (ADMIN)
-            4 => [['depto' => 'SABERES_CULTURA', 'rol' => 'ADMIN']],
+            0 => ['depto' => 'VITALIDAD_ECOLOGICA', 'rol' => 'ADMIN'],
+            1 => ['depto' => 'GOBERNANZA', 'rol' => 'ADMIN'],
+            2 => ['depto' => 'ECONOMIA_CUIDADO', 'rol' => 'ADMIN'],
+            3 => ['depto' => 'RESILIENCIA', 'rol' => 'ADMIN'],
+            4 => ['depto' => 'SABERES_CULTURA', 'rol' => 'ADMIN'],
         ];
 
         $count = 0;
-        foreach ($assignments as $userIndex => $deptoAssignments) {
+        foreach ($assignments as $userIndex => $assignment) {
             if (!isset($users[$userIndex])) continue;
             $user = $users[$userIndex];
 
-            foreach ($deptoAssignments as $assignment) {
-                $depto = $departamentos->firstWhere('codigo_interno', $assignment['depto']);
-                if (!$depto) continue;
+            $depto = $departamentos->firstWhere('codigo_interno', $assignment['depto']);
+            if (!$depto) continue;
 
-                DB::table('usuario_departamento')->updateOrInsert(
-                    ['user_id' => $user->id, 'departamento_id' => $depto->id],
-                    [
-                        'id' => Str::uuid()->toString(),
-                        'rol' => $assignment['rol'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]
-                );
-                $count++;
-            }
+            DB::table('usuario_departamento')->where('user_id', $user->id)->delete();
+            DB::table('usuario_departamento')->insert([
+                'id' => Str::uuid()->toString(),
+                'user_id' => $user->id,
+                'departamento_id' => $depto->id,
+                'rol' => $assignment['rol'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $count++;
         }
 
         $this->command->info("  🔗 Asignaciones usuario-departamento: {$count}");

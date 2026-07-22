@@ -18,12 +18,15 @@ use App\Application\Dataset\UseCases\UpdateDatasetUseCase;
 use App\Application\Dataset\UseCases\UpdateVariableUseCase;
 use App\Application\Dataset\UseCases\UploadDatasetUseCase;
 use App\Http\Controllers\Controller;
+use App\Infrastructure\Persistence\Eloquent\Models\DatasetModel;
+use App\Infrastructure\Persistence\Eloquent\Models\VariableMetadatoModel;
 use App\Presentation\Http\Requests\Dataset\ConfirmImportRequest;
 use App\Presentation\Http\Requests\Dataset\UpdateVariableRequest;
 use App\Presentation\Http\Requests\Dataset\UploadDatasetRequest;
 use App\Presentation\Http\Resources\Dataset\DatasetResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[OA\Tag(name: 'Datasets', description: 'Gestión de datasets')]
 class DatasetController extends Controller
@@ -90,6 +93,8 @@ class DatasetController extends Controller
     )]
     public function store(UploadDatasetRequest $request): JsonResponse
     {
+        Gate::authorize('create', [DatasetModel::class, $request->input('departamento_id')]);
+
         \Log::info('DatasetController@store - Request received', [
             'user_id' => $request->user()?->id,
             'validated' => $request->validated(),
@@ -138,6 +143,8 @@ class DatasetController extends Controller
     )]
     public function analyze(Request $request, string $id): JsonResponse
     {
+        Gate::authorize('update', DatasetModel::findOrFail($id));
+
         $result = $this->analyzeDatasetUseCase->execute($id, $request->user()->id);
 
         return response()->json($result->toArray());
@@ -166,6 +173,8 @@ class DatasetController extends Controller
     )]
     public function import(ConfirmImportRequest $request, string $id): JsonResponse
     {
+        Gate::authorize('update', DatasetModel::findOrFail($id));
+
         $dto = ConfirmImportDTO::fromArray(
             $request->validated(),
             $id,
@@ -225,6 +234,8 @@ class DatasetController extends Controller
     )]
     public function updateVariable(UpdateVariableRequest $request, string $id): JsonResponse
     {
+        Gate::authorize('update', VariableMetadatoModel::findOrFail($id));
+
         $result = $this->updateVariableUseCase->execute(
             $id,
             $request->user()->id,
@@ -259,6 +270,8 @@ class DatasetController extends Controller
     )]
     public function update(Request $request, string $id): JsonResponse
     {
+        Gate::authorize('update', DatasetModel::findOrFail($id));
+
         $validated = $request->validate([
             'nombre' => 'sometimes|string|max:255',
             'descripcion' => 'nullable|string|max:2000',
@@ -300,6 +313,15 @@ class DatasetController extends Controller
             'tipo_dato' => 'sometimes|string|in:NUMERICO,CATEGORICO,TEXTO,FECHA',
         ]);
 
+        $variables = VariableMetadatoModel::with('dataset')
+            ->whereIn('id', $validated['variable_ids'])
+            ->get();
+
+        $datasets = $variables->pluck('dataset')->filter()->unique('id');
+        foreach ($datasets as $dataset) {
+            Gate::authorize('update', $dataset);
+        }
+
         $result = $this->bulkUpdateVariablesUseCase->execute(
             $validated['variable_ids'],
             $request->user()->id,
@@ -325,6 +347,8 @@ class DatasetController extends Controller
     )]
     public function destroy(Request $request, string $id): JsonResponse
     {
+        Gate::authorize('delete', DatasetModel::findOrFail($id));
+
         $this->deleteDatasetUseCase->execute($id, $request->user()->id);
 
         return response()->json(['message' => 'Dataset eliminado exitosamente']);

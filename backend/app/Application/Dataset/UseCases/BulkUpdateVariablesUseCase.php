@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Application\Dataset\UseCases;
 
+use App\Application\Auth\Services\AuthorizationService;
 use App\Domain\Departamento\Repositories\DepartamentoRepositoryInterface;
 use App\Domain\Dataset\Repositories\DatasetRepositoryInterface;
 use App\Domain\Dataset\Repositories\VariableMetadatoRepositoryInterface;
+use App\Domain\User\Entities\User as DomainUser;
+use App\Models\User;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -16,6 +19,7 @@ class BulkUpdateVariablesUseCase
         private readonly VariableMetadatoRepositoryInterface $variableRepository,
         private readonly DatasetRepositoryInterface $datasetRepository,
         private readonly DepartamentoRepositoryInterface $departamentoRepository,
+        private readonly AuthorizationService $authorizationService,
     ) {}
 
     /**
@@ -31,6 +35,18 @@ class BulkUpdateVariablesUseCase
         if (empty($variableIds)) {
             throw new HttpException(Response::HTTP_BAD_REQUEST, 'No se proporcionaron variables');
         }
+
+        $eloquentUser = User::find($userId);
+        if (!$eloquentUser) {
+            throw new HttpException(Response::HTTP_UNAUTHORIZED, 'Usuario no encontrado');
+        }
+
+        $domainUser = new DomainUser(
+            id: $eloquentUser->id,
+            name: $eloquentUser->name ?? '',
+            email: $eloquentUser->email ?? '',
+            rol: $eloquentUser->rol,
+        );
 
         $updated = [];
         $errors = [];
@@ -52,8 +68,7 @@ class BulkUpdateVariablesUseCase
                         continue;
                     }
 
-                    $role = $this->departamentoRepository->getUserRole($dataset->departamentoId, $userId);
-                    if (!in_array($role, ['ADMIN', 'EDITOR'])) {
+                    if (!$this->authorizationService->canWriteVariable($domainUser, $dataset->departamentoId)) {
                         throw new HttpException(Response::HTTP_FORBIDDEN, 'No tienes permisos para modificar variables');
                     }
                     $verifiedDatasets[$variable->datasetId] = true;

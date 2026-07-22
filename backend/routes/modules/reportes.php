@@ -15,8 +15,8 @@ Route::get('/fichas/{filename}', [ReporteController::class, 'ficha']);
 Route::get('/', [ReporteController::class, 'index']);
 Route::get('/{id}', [ReporteController::class, 'show'])->whereUuid('id');
 
-// Escritura - solo admin autenticado
-Route::middleware(['auth:sanctum', 'role:ADMIN'])->group(function () {
+// Escritura - protegido por policies (T27)
+Route::middleware('auth:sanctum')->group(function () {
     Route::post('/', [ReporteController::class, 'store']);
     Route::put('/{id}', [ReporteController::class, 'update']);
     Route::delete('/{id}', [ReporteController::class, 'destroy']);

@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Application\Departamento\UseCases;
 
+use App\Application\Auth\Services\AuthorizationService;
 use App\Application\Departamento\DTOs\DepartamentoResponseDTO;
 use App\Application\Departamento\DTOs\UpdateDepartamentoDTO;
 use App\Domain\Departamento\Repositories\DepartamentoRepositoryInterface;
+use App\Domain\User\Entities\User as DomainUser;
+use App\Models\User;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -14,6 +17,7 @@ class UpdateDepartamentoUseCase
 {
     public function __construct(
         private readonly DepartamentoRepositoryInterface $departamentoRepository,
+        private readonly AuthorizationService $authorizationService,
     ) {}
 
     public function execute(UpdateDepartamentoDTO $dto): DepartamentoResponseDTO
@@ -24,10 +28,21 @@ class UpdateDepartamentoUseCase
             throw new HttpException(Response::HTTP_NOT_FOUND, 'Departamento no encontrado');
         }
 
-        // Verificar que el usuario tenga rol ADMIN
-        $role = $this->departamentoRepository->getUserRole($dto->id, $dto->userId);
-        if ($role !== 'ADMIN') {
-            throw new HttpException(Response::HTTP_FORBIDDEN, 'Solo los administradores pueden modificar el departamento');
+        $eloquentUser = User::find($dto->userId);
+        if (!$eloquentUser) {
+            throw new HttpException(Response::HTTP_UNAUTHORIZED, 'Usuario no encontrado');
+        }
+
+        $domainUser = new DomainUser(
+            id: $eloquentUser->id,
+            name: $eloquentUser->name ?? '',
+            email: $eloquentUser->email ?? '',
+            rol: $eloquentUser->rol,
+        );
+
+        if (!$this->authorizationService->canWriteObservatorio($domainUser, $dto->id) &&
+            !$this->authorizationService->hasDepartmentRole($domainUser, $dto->id, 'EDITOR')) {
+            throw new HttpException(Response::HTTP_FORBIDDEN, 'No tienes permisos para modificar este observatorio');
         }
 
         // Actualizar entidad
@@ -42,6 +57,8 @@ class UpdateDepartamentoUseCase
         // Guardar cambios
         $savedDepartamento = $this->departamentoRepository->update($updatedDepartamento);
 
-        return DepartamentoResponseDTO::fromEntity($savedDepartamento, 'ADMIN');
+        $userRole = $this->authorizationService->getDepartmentRole($domainUser, $dto->id) ?? 'EDITOR';
+
+        return DepartamentoResponseDTO::fromEntity($savedDepartamento, $userRole);
     }
 }

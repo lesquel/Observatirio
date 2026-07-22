@@ -17,6 +17,25 @@
 
   <!-- Content -->
   <mat-card class="users-card">
+    <div class="users-search-bar" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid var(--card-border, #e2e8f0);">
+      <mat-form-field appearance="outline" class="search-field" style="flex: 1; margin-bottom: -1.25rem;">
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-label>Buscar usuarios...</mat-label>
+        <input
+          matInput
+          type="text"
+          placeholder="Buscar por nombre o correo electrónico"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearchChange($event)"
+        />
+        @if (searchQuery()) {
+          <button matSuffix mat-icon-button (click)="clearSearch()">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+    </div>
+
     @if (loading()) {
       <div class="loading-container">
         <mat-spinner diameter="40"></mat-spinner>
@@ -29,7 +48,7 @@
           <!-- Name Column -->
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef>{{ 'users.columns.name' | translate }}</th>
-            <td mat-cell *matCellDef="let user">
+            <td mat-cell *matCellDef="let user" class="cell-primary">
               <div class="user-info">
                 <div class="user-avatar">
                   @if (user.perfil?.avatar) {
@@ -51,13 +70,13 @@
           <!-- Email Column -->
           <ng-container matColumnDef="email">
             <th mat-header-cell *matHeaderCellDef>{{ 'users.columns.email' | translate }}</th>
-            <td mat-cell *matCellDef="let user">{{ user.email }}</td>
+            <td mat-cell *matCellDef="let user" [attr.data-label]="'users.columns.email' | translate">{{ user.email }}</td>
           </ng-container>
 
           <!-- Role Column -->
           <ng-container matColumnDef="rol">
             <th mat-header-cell *matHeaderCellDef>{{ 'users.columns.role' | translate }}</th>
-            <td mat-cell *matCellDef="let user">
+            <td mat-cell *matCellDef="let user" [attr.data-label]="'users.columns.role' | translate">
               <span class="role-badge" [class]="getRoleBadgeClass(user.rol)">
                 {{ user.rol }}
               </span>
@@ -67,7 +86,7 @@
           <!-- Status Column -->
           <ng-container matColumnDef="is_active">
             <th mat-header-cell *matHeaderCellDef>{{ 'users.columns.status' | translate }}</th>
-            <td mat-cell *matCellDef="let user">
+            <td mat-cell *matCellDef="let user" [attr.data-label]="'users.columns.status' | translate">
               <span class="status-badge" [class]="getStatusBadgeClass(user.is_active)">
                 {{
                   user.is_active
@@ -81,13 +100,13 @@
           <!-- Created At Column -->
           <ng-container matColumnDef="created_at">
             <th mat-header-cell *matHeaderCellDef>{{ 'users.columns.createdAt' | translate }}</th>
-            <td mat-cell *matCellDef="let user">{{ formatDate(user.created_at) }}</td>
+            <td mat-cell *matCellDef="let user" [attr.data-label]="'users.columns.createdAt' | translate">{{ formatDate(user.created_at) }}</td>
           </ng-container>
 
           <!-- Actions Column -->
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>{{ 'common.labels.actions' | translate }}</th>
-            <td mat-cell *matCellDef="let user">
+            <td mat-cell *matCellDef="let user" class="cell-actions">
               <button
                 mat-icon-button
                 [matMenuTriggerFor]="menu"
@@ -112,6 +131,10 @@
                   <mat-icon>admin_panel_settings</mat-icon>
                   <span>{{ 'users.actions.changeRole' | translate }}</span>
                 </button>
+                <button mat-menu-item (click)="openPermissionsDialog(user)">
+                  <mat-icon>security</mat-icon>
+                  <span>Gestionar Permisos</span>
+                </button>
                 <mat-divider></mat-divider>
                 <button mat-menu-item class="delete-action" (click)="deleteUser(user)">
                   <mat-icon color="warn">delete</mat-icon>
@@ -134,6 +157,22 @@
                 >
                   <mat-icon>person</mat-icon>
                   <span>USER</span>
+                </button>
+                <button
+                  mat-menu-item
+                  (click)="changeRole(user, 'EDITOR')"
+                  [disabled]="user.rol === 'EDITOR'"
+                >
+                  <mat-icon>edit</mat-icon>
+                  <span>EDITOR</span>
+                </button>
+                <button
+                  mat-menu-item
+                  (click)="changeRole(user, 'SUBSCRIBER')"
+                  [disabled]="user.rol === 'SUBSCRIBER'"
+                >
+                  <mat-icon>card_membership</mat-icon>
+                  <span>SUBSCRIBER</span>
                 </button>
               </mat-menu>
             </td>

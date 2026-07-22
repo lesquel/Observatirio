@@ -1,5 +1,5 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, DestroyRef, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,10 +9,16 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MatTabsModule } from '@angular/material/tabs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dataset, Departamento } from '@core/models';
 import { DepartamentoService } from '@core/services/departamento.service';
+import { ArticulosService, Articulo } from '@core/services/articulos.service';
+import { ReportesService, Reporte } from '@core/services/reportes.service';
+import { AuthService } from '@core/services/auth.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { ArchivoVisor, FileViewerModalComponent } from '@shared/components/file-viewer-modal/file-viewer-modal.component';
 
 @Component({
   selector: 'app-public-departamento-detail',
@@ -28,7 +34,9 @@ import { TranslateModule } from '@ngx-translate/core';
     MatInputModule,
     MatProgressSpinnerModule,
     MatChipsModule,
+    MatTabsModule,
     TranslateModule,
+    FileViewerModalComponent,
   ],
   templateUrl: './public-departamento-detail.component.html',
   styleUrl: './public-departamento-detail.component.scss',
@@ -36,27 +44,84 @@ import { TranslateModule } from '@ngx-translate/core';
 export class PublicDepartamentoDetailComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly deptoService = inject(DepartamentoService);
+  private readonly articulosService = inject(ArticulosService);
+  private readonly reportesService = inject(ReportesService);
+  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly sanitizer = inject(DomSanitizer);
 
   departamento = signal<Departamento | null>(null);
+  articulos = signal<Articulo[]>([]);
+  reportes = signal<Reporte[]>([]);
   loading = signal(true);
+  iframeLoaded = signal(false);
   datasetSearchTerm = '';
+
+  /** Archivo (ficha/artículo) abierto en el visor embebido, sin salir de la app instalada */
+  archivoAbierto = signal<ArchivoVisor | null>(null);
 
   deptoGradient = 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)';
 
   private readonly datasetColors = [
-    '#6366F1',
-    '#EC4899',
-    '#14B8A6',
-    '#F59E0B',
-    '#EF4444',
-    '#8B5CF6',
-    '#06B6D4',
-    '#84CC16',
-    '#F97316',
-    '#3B82F6',
+    '#6366F1', '#EC4899', '#14B8A6', '#F59E0B',
+    '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16',
+    '#F97316', '#3B82F6',
   ];
+
+  /** Artículos agrupados por categoría */
+  articulosAgrupados = computed(() =>
+    this.articulosService.agruparPorCategoria(this.articulos())
+  );
+
+  /** Reportes agrupados por categoría */
+  reportesAgrupados = computed(() =>
+    this.reportesService.agruparPorCategoria(this.reportes())
+  );
+
+  /** URL segura para el iframe de PowerBI */
+  powerbiSafeUrl = computed((): SafeResourceUrl | null => {
+    const url = this.departamento()?.powerbi_url;
+    if (!url) return null;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  onIframeLoad(): void {
+    this.iframeLoaded.set(true);
+  }
+
+  tieneAcceso(item: Articulo | Reporte): boolean {
+    const vis = item.visibilidad || 'publico';
+    if (vis === 'publico') return true;
+
+    const user = this.authService.user();
+    if (!user) return false;
+
+    return user.rol === 'SUBSCRIBER' || user.rol === 'ADMIN' || user.rol === 'EDITOR';
+  }
+
+  sugerirSuscripcion(): void {
+    this.router.navigate(['/auth/login']);
+  }
+
+  /** Permite enlaces absolutos y rutas de archivos locales */
+  esUrlValida(url: string | null | undefined): url is string {
+    return !!url && url.trim().length > 0;
+  }
+
+  /** Formatea URLs absolutas y relativas (/1-recuperacion-economica.pdf) */
+  obtenerUrlVisor(url: string): string {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    return url.startsWith('/') ? url : `/${url}`;
+  }
+
+  /** Abre un artículo/ficha en el visor embebido, en vez de navegar a otro origen */
+  abrirArchivo(url: string, nombre: string, esPreview = false): void {
+    const finalUrl = this.obtenerUrlVisor(url);
+    this.archivoAbierto.set({ url: finalUrl, nombre, esPreview });
+  }
 
   get datasets(): Dataset[] {
     const all = this.departamento()?.datasets || [];
@@ -83,10 +148,20 @@ export class PublicDepartamentoDetailComponent implements OnInit {
   }
 
   loadDepartamento(id: string): void {
+    this.iframeLoaded.set(false);
     this.deptoService.getPublicById(id).subscribe({
       next: (depto) => {
         this.departamento.set(depto);
         this.loading.set(false);
+        // Cargar artículos y reportes filtrados por este departamento
+        this.articulosService.getAll(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: (arts) => this.articulos.set(arts),
+          error: () => this.articulos.set([]),
+        });
+        this.reportesService.getAll(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: (reps) => this.reportes.set(reps),
+          error: () => this.reportes.set([]),
+        });
       },
       error: () => {
         this.departamento.set(null);
@@ -101,14 +176,10 @@ export class PublicDepartamentoDetailComponent implements OnInit {
 
   getTypeClass(tipo: string): string {
     switch (tipo) {
-      case 'NUMERICO':
-        return 'type-numeric';
-      case 'CATEGORICO':
-        return 'type-categoric';
-      case 'FECHA':
-        return 'type-date';
-      default:
-        return 'type-text';
+      case 'NUMERICO': return 'type-numeric';
+      case 'CATEGORICO': return 'type-categoric';
+      case 'FECHA': return 'type-date';
+      default: return 'type-text';
     }
   }
 }

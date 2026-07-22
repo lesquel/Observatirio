@@ -3,19 +3,32 @@
   <header class="dashboard-header">
     <div class="header-content">
       <div class="welcome-section">
-        <span class="greeting">{{ getGreeting() }}</span>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;">
+          <span class="greeting">{{ getGreeting() }}</span>
+          <span class="badge" [ngClass]="authService.isAdmin() ? 'badge-admin' : 'badge-editor'" style="font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em; background: rgba(99, 102, 241, 0.1); color: #6366f1;">
+            {{ userRoleLabel() }}
+          </span>
+        </div>
         <h1 class="welcome-title">{{ authService.user()?.name || 'Usuario' }}</h1>
-        <p class="welcome-subtitle">{{ 'dashboard.welcomeMessage' | translate }}</p>
+        <p class="welcome-subtitle">
+          @if (authService.isAdmin()) {
+            {{ 'dashboard.welcomeMessage' | translate }}
+          } @else {
+            Tienes acceso a {{ departamentos().length }} dimensión(es) territorial(es) asignadas para análisis y edición de datos.
+          }
+        </p>
       </div>
       <div class="header-actions">
         <a class="action-btn secondary" routerLink="/admin/datasets/nuevo">
           <mat-icon>cloud_upload</mat-icon>
           <span>{{ 'common.buttons.import' | translate }}</span>
         </a>
-        <a class="action-btn primary" routerLink="/admin/departamentos/nuevo">
-          <mat-icon>add</mat-icon>
-          <span>{{ 'dashboard.quickActions.newDepartment' | translate }}</span>
-        </a>
+        @if (authService.isAdmin()) {
+          <a class="action-btn primary" routerLink="/admin/departamentos/nuevo">
+            <mat-icon>add</mat-icon>
+            <span>{{ 'dashboard.quickActions.newDepartment' | translate }}</span>
+          </a>
+        }
       </div>
     </div>
   </header>
@@ -232,9 +245,11 @@
             <div class="empty-state">
               <mat-icon>folder_off</mat-icon>
               <p>{{ 'dashboard.recentDepartments.empty' | translate }}</p>
-              <a routerLink="/admin/departamentos/nuevo" class="empty-action">{{
-                'layout.sidebar.createOne' | translate
-              }}</a>
+              @if (authService.isAdmin()) {
+                <a routerLink="/admin/departamentos/nuevo" class="empty-action">{{
+                  'layout.sidebar.createOne' | translate
+                }}</a>
+              }
             </div>
           }
         </div>
@@ -296,13 +311,15 @@
     <section class="quick-actions">
       <h3 class="section-title">{{ 'dashboard.quickActions.title' | translate }}</h3>
       <div class="actions-grid">
-        <a class="quick-action" routerLink="/admin/departamentos/nuevo" matRipple>
-          <div class="action-icon purple">
-            <mat-icon>add_business</mat-icon>
-          </div>
-          <span class="action-label">{{ 'dashboard.quickActions.newDepartment' | translate }}</span>
-          <p class="action-desc">{{ 'dashboard.quickActions.newDepartmentDesc' | translate }}</p>
-        </a>
+        @if (authService.isAdmin()) {
+          <a class="quick-action" routerLink="/admin/departamentos/nuevo" matRipple>
+            <div class="action-icon purple">
+              <mat-icon>add_business</mat-icon>
+            </div>
+            <span class="action-label">{{ 'dashboard.quickActions.newDepartment' | translate }}</span>
+            <p class="action-desc">{{ 'dashboard.quickActions.newDepartmentDesc' | translate }}</p>
+          </a>
+        }
 
         <a class="quick-action" routerLink="/admin/datasets/nuevo" matRipple>
           <div class="action-icon blue">
@@ -319,6 +336,16 @@
           <span class="action-label">{{ 'dashboard.quickActions.viewAll' | translate }}</span>
           <p class="action-desc">{{ 'dashboard.quickActions.viewAllDesc' | translate }}</p>
         </a>
+
+        @if (authService.isAdmin()) {
+          <a class="quick-action admin-action" routerLink="/admin/usuarios" matRipple>
+            <div class="action-icon red">
+              <mat-icon>manage_accounts</mat-icon>
+            </div>
+            <span class="action-label">{{ 'dashboard.quickActions.manageUsers' | translate }}</span>
+            <p class="action-desc">{{ 'dashboard.quickActions.manageUsersDesc' | translate }}</p>
+          </a>
+        }
 
         @if (datasetsRecientes().length > 0) {
           <a

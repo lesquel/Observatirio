@@ -1,14 +1,17 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, DestroyRef, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CategoriaDataset, Dataset } from '@core/models';
 import { CategoriaService } from '@core/services/categoria.service';
+import { ArticulosService, Articulo } from '@core/services/articulos.service';
+import { ReportesService, Reporte } from '@core/services/reportes.service';
 import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
@@ -22,6 +25,7 @@ import { TranslateModule } from '@ngx-translate/core';
     MatIconModule,
     MatProgressSpinnerModule,
     MatChipsModule,
+    MatTabsModule,
     TranslateModule,
   ],
   templateUrl: './barometer-view.component.html',
@@ -31,13 +35,22 @@ export class BarometerViewComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly route = inject(ActivatedRoute);
   private readonly categoriaService = inject(CategoriaService);
+  private readonly articulosService = inject(ArticulosService);
+  private readonly reportesService = inject(ReportesService);
   private readonly destroyRef = inject(DestroyRef);
 
   categoria = signal<CategoriaDataset | null>(null);
   datasets = signal<Dataset[]>([]);
+  articulos = signal<Articulo[]>([]);
+  reportes = signal<Reporte[]>([]);
   loading = signal(true);
   error = signal(false);
   codigo = '';
+
+  // ─── PWA Install Prompt ───
+  private readonly deferredPrompt = signal<any>(null);
+  readonly canInstall = computed(() => !!this.deferredPrompt());
+  installOutcome = signal<'accepted' | 'dismissed' | null>(null);
 
   /** Maps category codes to i18n key segments */
   private readonly categoryI18nMap: Record<string, string> = {
@@ -59,6 +72,16 @@ export class BarometerViewComponent implements OnInit {
     '#3B82F6',
   ];
 
+  /** Artículos agrupados por categoría */
+  articulosAgrupados = computed(() =>
+    this.articulosService.agruparPorCategoria(this.articulos())
+  );
+
+  /** Reportes agrupados por categoría */
+  reportesAgrupados = computed(() =>
+    this.reportesService.agruparPorCategoria(this.reportes())
+  );
+
   get i18nSection(): string {
     return this.categoryI18nMap[this.codigo] || 'research';
   }
@@ -69,6 +92,18 @@ export class BarometerViewComponent implements OnInit {
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
+      // Capture PWA install prompt
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        this.deferredPrompt.set(e);
+      });
+
+      // Listen for successful installation
+      window.addEventListener('appinstalled', () => {
+        this.deferredPrompt.set(null);
+        this.installOutcome.set('accepted');
+      });
+
       this.route.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
         this.codigo = params['codigo'] || 'investigacion';
         this.loadData();
@@ -100,6 +135,18 @@ export class BarometerViewComponent implements OnInit {
         this.loading.set(false);
       },
     });
+
+    // Load articles (can be filtered if backend supports filtering by category code, but for now we load all or filter client side)
+    this.articulosService.getAll().subscribe({
+      next: (arts) => this.articulos.set(arts),
+      error: () => this.articulos.set([]),
+    });
+
+    // Load reports
+    this.reportesService.getAll().subscribe({
+      next: (reps) => this.reportes.set(reps),
+      error: () => this.reportes.set([]),
+    });
   }
 
   getDatasetColor(index: number): string {
@@ -117,5 +164,14 @@ export class BarometerViewComponent implements OnInit {
       default:
         return 'type-text';
     }
+  }
+
+  async installApp(): Promise<void> {
+    const prompt = this.deferredPrompt();
+    if (!prompt) return;
+    prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    this.installOutcome.set(outcome);
+    this.deferredPrompt.set(null);
   }
 }

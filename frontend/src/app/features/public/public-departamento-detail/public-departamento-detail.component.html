@@ -37,81 +37,396 @@
             <mat-icon>storage</mat-icon>
             {{ totalRegistros | number }} {{ 'public.departmentDetail.stats.records' | translate }}
           </span>
+          <span class="stat">
+            <mat-icon>article</mat-icon>
+            {{ articulos().length }} Artículos
+          </span>
         </div>
       </div>
     </div>
 
-    <!-- Datasets Section -->
-    <section class="datasets-section">
-      <div class="section-header">
-        <h2 class="section-title">
-          <mat-icon>folder_open</mat-icon>
-          {{ 'public.departmentDetail.datasets.title' | translate }}
-        </h2>
-        @if ((departamento()?.datasets?.length || 0) > 3) {
-          <mat-form-field appearance="outline" class="dataset-search-field">
-            <mat-icon matPrefix>search</mat-icon>
-            <input
-              matInput
-              [(ngModel)]="datasetSearchTerm"
-              [placeholder]="'public.departmentDetail.datasets.search' | translate"
-            />
-            @if (datasetSearchTerm) {
-              <button matSuffix mat-icon-button (click)="datasetSearchTerm = ''">
-                <mat-icon>close</mat-icon>
-              </button>
-            }
-          </mat-form-field>
-        }
-      </div>
+    <!-- Tabs -->
+    <mat-tab-group class="content-tabs" animationDuration="200ms">
 
-      @if (datasets.length > 0) {
-        <div class="datasets-grid">
-          @for (ds of datasets; track ds.id; let i = $index) {
-            <a [routerLink]="['/publico/datasets', ds.id]" class="dataset-card">
-              <div class="card-icon" [style.background]="getDatasetColor(i)">
-                <mat-icon>description</mat-icon>
-              </div>
-              <div class="card-content">
-                <h3>{{ ds.nombre }}</h3>
-                <div class="dataset-meta">
-                  <span class="meta-item">
-                    <mat-icon>grid_on</mat-icon>
-                    {{ ds.total_registros | number }}
-                    {{ 'public.departmentDetail.stats.records' | translate }}
-                  </span>
-                  @if (ds.created_at) {
-                    <span class="meta-item">
-                      <mat-icon>calendar_today</mat-icon>
-                      {{ ds.created_at | date: 'dd/MM/yyyy' }}
-                    </span>
-                  }
-                </div>
-                <div class="variables-preview">
-                  @if (ds.variables && ds.variables.length > 0) {
-                    @for (v of ds.variables.slice(0, 4); track v.id) {
-                      <span class="variable-chip" [class]="getTypeClass(v.tipo_dato)">
-                        {{ v.nombre_original }}
+      <!-- ── Tab: Datasets ──────────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>folder_open</mat-icon>
+          <span>{{ 'public.departmentDetail.datasets.title' | translate }}</span>
+        </ng-template>
+
+        <section class="tab-section datasets-section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <mat-icon>folder_open</mat-icon>
+              {{ 'public.departmentDetail.datasets.title' | translate }}
+            </h2>
+            @if ((departamento()?.datasets?.length || 0) > 3) {
+              <mat-form-field appearance="outline" class="dataset-search-field">
+                <mat-icon matPrefix>search</mat-icon>
+                <input
+                  matInput
+                  [(ngModel)]="datasetSearchTerm"
+                  [placeholder]="'public.departmentDetail.datasets.search' | translate"
+                />
+                @if (datasetSearchTerm) {
+                  <button matSuffix mat-icon-button (click)="datasetSearchTerm = ''">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                }
+              </mat-form-field>
+            }
+          </div>
+
+          @if (datasets.length > 0) {
+            <div class="datasets-grid">
+              @for (ds of datasets; track ds.id; let i = $index) {
+                <a [routerLink]="['/publico/datasets', ds.id]" class="dataset-card">
+                  <div class="card-icon" [style.background]="getDatasetColor(i)">
+                    <mat-icon>description</mat-icon>
+                  </div>
+                  <div class="card-content">
+                    <h3>{{ ds.nombre }}</h3>
+                    <div class="dataset-meta">
+                      <span class="meta-item">
+                        <mat-icon>grid_on</mat-icon>
+                        {{ ds.total_registros | number }}
+                        {{ 'public.departmentDetail.stats.records' | translate }}
                       </span>
-                    }
-                    @if (ds.variables.length > 4) {
-                      <span class="more-chip">+{{ ds.variables.length - 4 }}</span>
-                    }
+                      @if (ds.created_at) {
+                        <span class="meta-item">
+                          <mat-icon>calendar_today</mat-icon>
+                          {{ ds.created_at | date: 'dd/MM/yyyy' }}
+                        </span>
+                      }
+                    </div>
+                    <div class="variables-preview">
+                      @if (ds.variables && ds.variables.length > 0) {
+                        @for (v of ds.variables.slice(0, 4); track v.id) {
+                          <span class="variable-chip" [class]="getTypeClass(v.tipo_dato)">
+                            {{ v.nombre_original }}
+                          </span>
+                        }
+                        @if (ds.variables.length > 4) {
+                          <span class="more-chip">+{{ ds.variables.length - 4 }}</span>
+                        }
+                      }
+                    </div>
+                  </div>
+                  <mat-icon class="card-arrow">chevron_right</mat-icon>
+                </a>
+              }
+            </div>
+          } @else {
+            <div class="empty-state">
+              <mat-icon>folder_off</mat-icon>
+              <h3>{{ 'public.departmentDetail.datasets.empty' | translate }}</h3>
+              <p>{{ 'public.departmentDetail.datasets.emptyMessage' | translate }}</p>
+            </div>
+          }
+        </section>
+      </mat-tab>
+
+      <!-- ── Tab: Artículos ─────────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>article</mat-icon>
+          <span>Artículos</span>
+        </ng-template>
+
+        <section class="tab-section articulos-section">
+          @if (articulosAgrupados().length > 0) {
+            @for (grupo of articulosAgrupados(); track grupo.categoria) {
+              <div class="categoria-grupo">
+                <h2 class="categoria-titulo">
+                  <span class="categoria-line"></span>
+                  {{ grupo.categoria }}
+                  <span class="categoria-count">{{ grupo.items.length }}</span>
+                </h2>
+                <div class="articulos-grid">
+                  @for (art of grupo.items; track art.id) {
+                    <div class="articulo-card">
+                      <!-- Cover -->
+                      <div
+                        class="articulo-cover"
+                        [style.background]="'linear-gradient(135deg, ' + grupo.color + ' 0%, #1e1b4b 100%)'"
+                        [style.cursor]="esUrlValida(art.enlace) ? 'pointer' : 'default'"
+                        (click)="esUrlValida(art.enlace) ? abrirArchivo(art.enlace, art.titulo, !tieneAcceso(art)) : null"
+                      >
+                        <div class="cover-pattern"></div>
+                        @if (art.visibilidad === 'suscriptor') {
+                          <span class="subscription-badge" style="position: absolute; top: 1rem; left: 1rem; background: rgba(200, 16, 46, 0.95); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.725rem; display: flex; align-items: center; gap: 0.25rem; font-weight: 500; z-index: 2;">
+                            <mat-icon style="font-size: 0.875rem; width: 0.875rem; height: 0.875rem;">lock</mat-icon>
+                            Suscriptor
+                          </span>
+                        }
+                        <span class="articulo-categoria-badge">
+                          <mat-icon>label</mat-icon>
+                          {{ art.categoria?.nombre || 'Sin categoría' }}
+                        </span>
+                        <div class="cover-icon">
+                          <mat-icon>article</mat-icon>
+                        </div>
+                      </div>
+                      <!-- Body -->
+                      <div class="articulo-body">
+                        <h3 class="articulo-titulo" [title]="art.titulo">{{ art.titulo }}</h3>
+                        <p class="articulo-desc">{{ art.descripcion }}</p>
+                        <div class="articulo-meta">
+                          @if (art.autor) {
+                            <div class="meta-row">
+                              <mat-icon>person</mat-icon>
+                              <span>{{ art.autor }}</span>
+                            </div>
+                          }
+                          @if (art.fecha_publicacion) {
+                            <div class="meta-row">
+                              <mat-icon>calendar_today</mat-icon>
+                              <span>{{ art.fecha_publicacion | date: 'dd/MM/yyyy' }}</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                      <!-- Actions -->
+                      @if (esUrlValida(art.enlace)) {
+                        <div class="articulo-actions">
+                          @if (tieneAcceso(art)) {
+                            <button
+                              mat-flat-button
+                              type="button"
+                              (click)="abrirArchivo(art.enlace, art.titulo)"
+                              class="btn-leer"
+                            >
+                              <mat-icon>visibility</mat-icon>
+                              Leer artículo
+                            </button>
+                          } @else {
+                            <div style="display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
+                              <button
+                                mat-stroked-button
+                                type="button"
+                                (click)="abrirArchivo(art.enlace, art.titulo, true)"
+                                style="flex: 1;"
+                              >
+                                <mat-icon>visibility</mat-icon>
+                                Vista Previa
+                              </button>
+                              <button mat-flat-button color="accent" style="flex: 1;" (click)="sugerirSuscripcion()">
+                                <mat-icon>lock</mat-icon>
+                                Suscribirse
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
                   }
                 </div>
               </div>
-              <mat-icon class="card-arrow">chevron_right</mat-icon>
-            </a>
+            }
+          } @else {
+            <div class="empty-state">
+              <mat-icon>article</mat-icon>
+              <h3>No hay artículos disponibles</h3>
+              <p>Aún no se han publicado artículos para este observatorio.</p>
+            </div>
           }
-        </div>
-      } @else {
-        <div class="empty-state">
-          <mat-icon>folder_off</mat-icon>
-          <h3>{{ 'public.departmentDetail.datasets.empty' | translate }}</h3>
-          <p>{{ 'public.departmentDetail.datasets.emptyMessage' | translate }}</p>
-        </div>
-      }
-    </section>
+        </section>
+      </mat-tab>
+
+      <!-- ── Tab: PowerBI ───────────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>bar_chart</mat-icon>
+          <span>PowerBI</span>
+        </ng-template>
+
+        <section class="tab-section powerbi-section">
+          @if (departamento()?.powerbi_url) {
+            <!-- Embedded iframe header -->
+            <div class="powerbi-embed-header">
+              <div class="powerbi-embed-title">
+                <div class="powerbi-embed-icon">
+                  <mat-icon>analytics</mat-icon>
+                </div>
+                <div>
+                  <h2>{{ departamento()?.powerbi_label || 'Dashboard Interactivo' }}</h2>
+                  <p>Dashboard embebido — interactúa directamente con los datos</p>
+                </div>
+              </div>
+              <div class="powerbi-embed-actions">
+                <a
+                  mat-stroked-button
+                  [href]="departamento()!.powerbi_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn-powerbi-external"
+                  title="Abrir en pantalla completa"
+                >
+                  <mat-icon>open_in_new</mat-icon>
+                  Pantalla completa
+                </a>
+              </div>
+            </div>
+
+            <!-- iFrame container -->
+            <div class="powerbi-iframe-container">
+              <div class="powerbi-loading-overlay" [class.hidden]="iframeLoaded()">
+                <mat-spinner diameter="40"></mat-spinner>
+                <span>Cargando dashboard…</span>
+              </div>
+              <iframe
+                [src]="powerbiSafeUrl()"
+                class="powerbi-iframe"
+                frameborder="0"
+                allowfullscreen
+                (load)="onIframeLoad()"
+                title="Dashboard Power BI"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation"
+              ></iframe>
+            </div>
+
+          } @else {
+            <!-- Unavailable state -->
+            <div class="powerbi-card">
+              <div class="powerbi-icon">
+                <mat-icon>analytics</mat-icon>
+              </div>
+              <div class="powerbi-info">
+                <h2>Dashboard Interactivo</h2>
+                <p>Accede al dashboard de Power BI para explorar los datos de este observatorio con gráficos dinámicos y filtros avanzados.</p>
+                <div class="powerbi-unavailable">
+                  <mat-icon>schedule</mat-icon>
+                  <span>Dashboard en construcción — próximamente disponible</span>
+                </div>
+              </div>
+            </div>
+          }
+        </section>
+      </mat-tab>
+
+      <!-- ── Tab: Reportes ─────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>analytics</mat-icon>
+          <span>Reportes</span>
+        </ng-template>
+
+        <section class="tab-section reportes-section">
+          @if (reportesAgrupados().length > 0) {
+            @for (grupo of reportesAgrupados(); track grupo.categoria) {
+              <div class="categoria-grupo">
+                <h2 class="categoria-titulo">
+                  <span class="categoria-line"></span>
+                  {{ grupo.categoria }}
+                  <span class="categoria-count">{{ grupo.items.length }}</span>
+                </h2>
+                <div class="articulos-grid">
+                  @for (rep of grupo.items; track rep.id) {
+                    <div class="articulo-card">
+                      <!-- Cover -->
+                      <div
+                        class="articulo-cover"
+                        [style.background]="'linear-gradient(135deg, ' + grupo.color + ' 0%, #1e1b4b 100%)'"
+                        [style.cursor]="esUrlValida(rep.ficha_indicador || rep.link_url) ? 'pointer' : 'default'"
+                        (click)="esUrlValida(rep.ficha_indicador || rep.link_url) ? abrirArchivo(rep.ficha_indicador || rep.link_url!, rep.nombre_indicador, !tieneAcceso(rep)) : null"
+                      >
+                        <div class="cover-pattern"></div>
+                        @if (rep.visibilidad === 'suscriptor') {
+                          <span class="subscription-badge" style="position: absolute; top: 1rem; left: 1rem; background: rgba(200, 16, 46, 0.95); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.725rem; display: flex; align-items: center; gap: 0.25rem; font-weight: 500; z-index: 2;">
+                            <mat-icon style="font-size: 0.875rem; width: 0.875rem; height: 0.875rem;">lock</mat-icon>
+                            Suscriptor
+                          </span>
+                        }
+                        <span class="articulo-categoria-badge">
+                          <mat-icon>analytics</mat-icon>
+                          {{ rep.categoria?.nombre || 'Sin categoría' }}
+                        </span>
+                        <div class="cover-icon">
+                          <mat-icon>bar_chart</mat-icon>
+                        </div>
+                      </div>
+                      <!-- Body -->
+                      <div class="articulo-body">
+                        <h3 class="articulo-titulo" [title]="rep.nombre_indicador">{{ rep.nombre_indicador }}</h3>
+                        <p class="articulo-desc">{{ rep.descripcion_indicador }}</p>
+                        <div class="articulo-meta">
+                          @if (rep.fuente) {
+                            <div class="meta-row">
+                              <mat-icon>source</mat-icon>
+                              <span>{{ rep.fuente }}</span>
+                            </div>
+                          }
+                          @if (rep.fecha_publicacion) {
+                            <div class="meta-row">
+                              <mat-icon>calendar_today</mat-icon>
+                              <span>{{ rep.fecha_publicacion | date: 'dd/MM/yyyy' }}</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                      <!-- Actions -->
+                      <div class="articulo-actions">
+                        @if (tieneAcceso(rep)) {
+                          @if (rep.link_url) {
+                            <a mat-flat-button [href]="rep.link_url" target="_blank" class="btn-powerbi">
+                              <mat-icon>open_in_new</mat-icon>
+                              Ver en PowerBI
+                            </a>
+                          }
+                          @if (esUrlValida(rep.ficha_indicador)) {
+                            <button
+                              mat-stroked-button
+                              type="button"
+                              (click)="abrirArchivo(rep.ficha_indicador, rep.nombre_indicador)"
+                              class="btn-descargar"
+                            >
+                              <mat-icon>picture_as_pdf</mat-icon>
+                              Ver ficha
+                            </button>
+                          }
+                        } @else {
+                          <div style="display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
+                            @if (rep.ficha_indicador || rep.link_url) {
+                              <button
+                                mat-stroked-button
+                                type="button"
+                                (click)="abrirArchivo(rep.ficha_indicador || rep.link_url!, rep.nombre_indicador, true)"
+                                style="flex: 1;"
+                              >
+                                <mat-icon>visibility</mat-icon>
+                                Vista Previa
+                              </button>
+                            }
+                            <button mat-flat-button color="accent" style="flex: 1;" (click)="sugerirSuscripcion()">
+                              <mat-icon>lock</mat-icon>
+                              Suscribirse
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="empty-state">
+              <mat-icon>analytics</mat-icon>
+              <h3>No hay reportes disponibles</h3>
+              <p>Aún no se han publicado reportes o dashboards para este observatorio.</p>
+            </div>
+          }
+        </section>
+      </mat-tab>
+
+    </mat-tab-group>
+
+    <app-file-viewer-modal
+      [archivo]="archivoAbierto()"
+      (cerrar)="archivoAbierto.set(null)"
+    ></app-file-viewer-modal>
+
   } @else {
     <!-- Error state -->
     <div class="error-state">

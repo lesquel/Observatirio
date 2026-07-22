@@ -28,6 +28,26 @@
   border: 1px solid var(--card-border);
   border-radius: var(--radius-xl);
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  min-width: 0;           /* ← AGREGADO: permite que el flex container encoja */
+  width: 100%;            /* ← AGREGADO: limita al ancho del padre */
+  box-sizing: border-box; /* ← AGREGADO: incluye padding en width */
+}
+
+.header-info {
+  min-width: 0;           /* ← CLAVE: permite que este flex item encoja */
+  max-width: 100%;
+  width: 100%;
+}
+
+.header-info > p {
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;  /* ← FUERZA ruptura de palabra larga */
+  word-break: break-word;   /* ← fallback */
+  hyphens: auto;            /* ← silabeo */
+  max-width: 100%;
 }
 
 .header-icon {
@@ -117,10 +137,26 @@
     flex-direction: column;
     text-align: center;
     align-items: center;
+    min-width: 0;        /* ← REPITE AQUÍ TAMBIÉN */
+    width: 100%;
+  }
+
+  .header-info {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .header-info > p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
   }
 
   .header-stats {
     justify-content: center;
+    width: 100%;
   }
 }
 
@@ -134,6 +170,9 @@
   border-radius: var(--radius-lg);
   text-decoration: none;
   transition: all var(--transition-fast);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .dataset-card:hover {
@@ -161,6 +200,7 @@
 .card-content {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
 }
 
 .card-content h3 {
@@ -168,9 +208,8 @@
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 0.375rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .dataset-meta {
@@ -178,6 +217,8 @@
   gap: 0.75rem;
   flex-wrap: wrap;
   margin-bottom: 0.375rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .meta-item {
@@ -186,12 +227,16 @@
   gap: 0.25rem;
   font-size: 0.6875rem;
   color: var(--text-tertiary);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .meta-item mat-icon {
   font-size: 13px;
   width: 13px;
   height: 13px;
+  flex-shrink: 0;
 }
 
 .depto-badge {
@@ -200,6 +245,9 @@
   padding: 0.125rem 0.5rem;
   border-radius: var(--radius-sm);
   font-weight: 500;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .depto-badge mat-icon {
@@ -210,12 +258,17 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .variable-chip {
   font-size: 0.5625rem;
   padding: 0.0625rem 0.3125rem;
   border-radius: var(--radius-sm);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   text-transform: uppercase;
   font-weight: 500;
 }
